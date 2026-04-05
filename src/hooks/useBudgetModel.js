@@ -73,6 +73,12 @@ export function useBudgetModel() {
   const totalFreed = freedBills + wantsRemaining + freeloaderMoney + savingsRemaining;
   const remainderToInvestments = totalFreed - biggerPurchase;
 
+  const formatRemaining = (value) => {
+    if (value < 0) return `$${value}`;
+    if (value === 0) return '$0';
+    return `$${value}`;
+  };
+
   const budgetSections = [
     {
       title: "Needs",
@@ -112,5 +118,8 @@ export function useBudgetModel() {
     needsRemaining, wantsRemaining, savingsRemaining,
     freeloaderMoney, totalFreed, remainderToInvestments,
     inputs, setInputs,
+    needsRemainingFormatted: formatRemaining(needsRemaining),
+    wantsRemainingFormatted: formatRemaining(wantsRemaining),
+    savingsRemainingFormatted: formatRemaining(savingsRemaining),
   };
 }
