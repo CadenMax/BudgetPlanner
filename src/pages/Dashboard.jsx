@@ -19,8 +19,8 @@ export default function Dashboard({ model }) {
         <div className="flex flex-col gap-4">
           <h2 className="text-xs font-semibold uppercase tracking-widest text-gray-500 fade-up">Income Summary</h2>
           <div className="grid grid-cols-2 gap-4">
-            <MetricCard label="Gross income"  value={model.grossIncome} hint="Hours × rate + extra" color="indigo" icon="💰" delay="fade-up-1" />
-            <MetricCard label="PAYG withheld" value={model.payg}        hint={model.taxProfile}      color="orange" icon="🏛️" delay="fade-up-2" />
+            <MetricCard label="Gross income" value={model.grossIncome} hint="Hours × rate + extra" color="indigo" icon="💰" delay="fade-up-1" />
+            <MetricCard label="PAYG withheld" value={model.payg} hint={model.taxProfile} color="orange" icon="🏛️" delay="fade-up-2" />
           </div>
           <MetricCard label="Net pay" value={model.netPay} hint="Take-home after tax" color="green" icon="✅" delay="fade-up-3" />
 
@@ -45,19 +45,19 @@ export default function Dashboard({ model }) {
       <div>
         <h2 className="text-xs font-semibold uppercase tracking-widest text-gray-500 mb-4 fade-up">Budget Allocations</h2>
         <div className="grid gap-4 sm:grid-cols-3">
-          <MetricCard label="Needs budget"    value={model.needsBudget}    hint="50% of net pay"           color="green"  icon="🏠" delay="fade-up-1" />
-          <MetricCard label="Wants budget"    value={model.wantsBudget}    hint="30% of net pay"           color="indigo" icon="🎮" delay="fade-up-2" />
-          <MetricCard label="Savings budget"  value={model.savingsBudget}  hint="20% of net pay"           color="orange" icon="💎" delay="fade-up-3" />
+          <MetricCard label="Needs budget" value={model.needsBudget} hint="50% of net pay" color="green" icon="🏠" delay="fade-up-1" />
+          <MetricCard label="Wants budget" value={model.wantsBudget} hint="30% of net pay" color="indigo" icon="🎮" delay="fade-up-2" />
+          <MetricCard label="Savings budget" value={model.savingsBudget} hint="20% of net pay" color="orange" icon="💎" delay="fade-up-3" />
         </div>
       </div>
 
       {/* Remaining — 3 col */}
       <div>
-        <h2 className="text-xs font-semibold uppercase tracking-widest text-gray-500 mb-4 fade-up">Remaining After Expenses</h2>
+        <h2 className="text-xs font-semibold uppercase tracking-widest text-gray-0 mb-4 fade-up">Remaining After Expenses</h2>
         <div className="grid gap-4 sm:grid-cols-3">
-          <MetricCard label="Needs remaining"   value={model.needsRemaining}   color="green"  delay="fade-up-1" />
-          <MetricCard label="Wants remaining"   value={model.wantsRemaining}   color="indigo" delay="fade-up-2" />
-          <MetricCard label="Savings remaining" value={model.savingsRemaining} color="orange" delay="fade-up-3" />
+          <MetricCard label="Needs remaining" value={model.needsRemainingFormatted} color="green" delay="fade-up-1" />
+          <MetricCard label="Wants remaining" value={model.wantsRemainingFormatted} color="indigo" delay="fade-up-2" />
+          <MetricCard label="Savings remaining" value={model.savingsRemainingFormatted} color="orange" delay="fade-up-3" />
         </div>
       </div>
 
@@ -65,8 +65,8 @@ export default function Dashboard({ model }) {
       <div>
         <h2 className="text-xs font-semibold uppercase tracking-widest text-gray-500 mb-4 fade-up">Freed Capital</h2>
         <div className="grid gap-4 sm:grid-cols-2">
-          <MetricCard label="Freeloader money"          value={model.freeloaderMoney}          hint="Freed-up needs logic" color="indigo" icon="🚀" delay="fade-up-1" />
-          <MetricCard label="Remainder to investments"  value={model.remainderToInvestments}   hint="Total freed minus bigger purchase" color="green" icon="📈" delay="fade-up-2" />
+          <MetricCard label="Freeloader money" value={model.freeloaderMoney} hint="Freed-up needs logic" color="indigo" icon="🚀" delay="fade-up-1" />
+          <MetricCard label="Remainder to investments" value={model.remainderToInvestments} hint="Total freed minus bigger purchase" color="green" icon="📈" delay="fade-up-2" />
         </div>
       </div>
 
