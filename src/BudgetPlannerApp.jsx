@@ -30,7 +30,7 @@ export default function BudgetPlannerApp() {
                   background: "#6ee7b7",
                   boxShadow: "0 0 8px #6ee7b7"
                 }} />
-                <span className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-500">Personal Finance</span>
+                <span className="text-xs font-semibold uppercase tracking-[0.2em] text-white--500">Personal Finance</span>
               </div>
               <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight" style={{
                 background: "linear-gradient(135deg, #f0f0f8 0%, #6ee7b7 50%, #818cf8 100%)",
@@ -39,7 +39,7 @@ export default function BudgetPlannerApp() {
               }}>
                 Budget Planner
               </h1>
-              <p className="text-sm text-gray-600 mt-1">ATO tax withholding · 50/30/20 rule</p>
+              <p className="text-sm text-white-600 mt-1">ATO tax withholding · 50/30/20 rule</p>
             </div>
 
             {/* Live stats pills */}

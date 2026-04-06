@@ -74,7 +74,7 @@ export function useBudgetModel() {
   const remainderToInvestments = totalFreed - biggerPurchase;
 
   const formatRemaining = (value) => {
-    if (value < 0) return `$${value}`;
+    if (value < 0) return `$${value.toFixed(2)}`;
     if (value === 0) return '$0';
     return `$${value}`;
   };
