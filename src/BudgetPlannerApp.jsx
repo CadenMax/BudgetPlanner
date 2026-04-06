@@ -4,11 +4,16 @@ import Dashboard from "./pages/Dashboard";
 import TaxCalculator from "./pages/TaxCalculator";
 import LookupTables from "./pages/LookupTables";
 import { formatMoney } from "./utils/format";
+import {
+  LayoutDashboard,
+  Calculator,
+  BookSearch
+} from "lucide-react";
 
 const tabs = [
-  { key: "dashboard", label: "Dashboard",       icon: "▦" },
-  { key: "tax",       label: "Tax Calculator",  icon: "⟁" },
-  { key: "tables",    label: "Lookup Tables",   icon: "≡" },
+  { key: "dashboard", label: "Dashboard",       icon: <LayoutDashboard size={18} /> },
+  { key: "tax",       label: "Tax Calculator",  icon: <Calculator size={18} /> },
+  { key: "tables",    label: "Lookup Tables",   icon: <BookSearch size={18} /> },
 ];
 
 export default function BudgetPlannerApp() {
@@ -24,22 +29,13 @@ export default function BudgetPlannerApp() {
           {/* Top row */}
           <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-6 mb-8">
             <div>
-              <div className="flex items-center gap-2 mb-2">
-                <div style={{
-                  width: 8, height: 8, borderRadius: "50%",
-                  background: "#6ee7b7",
-                  boxShadow: "0 0 8px #6ee7b7"
-                }} />
-                <span className="text-xs font-semibold uppercase tracking-[0.2em] text-white--500">Personal Finance</span>
-              </div>
               <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight" style={{
                 background: "linear-gradient(135deg, #f0f0f8 0%, #6ee7b7 50%, #818cf8 100%)",
                 WebkitBackgroundClip: "text",
                 WebkitTextFillColor: "transparent",
               }}>
-                Budget Planner
+                Budget Elite
               </h1>
-              <p className="text-sm text-white-600 mt-1">ATO tax withholding · 50/30/20 rule</p>
             </div>
 
             {/* Live stats pills */}

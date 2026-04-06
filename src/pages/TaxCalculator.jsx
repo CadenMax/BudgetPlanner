@@ -37,13 +37,13 @@ export default function TaxCalculator({ model }) {
           <div className="grid grid-cols-2 divide-x divide-white/5">
             <div className="px-6 py-4">
               <div className="text-xs uppercase tracking-widest text-white-500 mb-1">PAYG Withheld</div>
-              <div className="mono text-2xl font-bold text-rose-400">{formatMoney(model.payg)}</div>
-              <div className="mono text-xs text-rose-400/60 mt-0.5">{effectiveRate.toFixed(1)}% effective</div>
+              <div className="mono text-2xl font-bold text-orange-400">{formatMoney(model.payg)}</div>
+              <div className="mono text-xs text-white-400/60 mt-0.5">{effectiveRate.toFixed(1)}% effective</div>
             </div>
             <div className="px-6 py-4">
               <div className="text-xs uppercase tracking-widest text-white-500 mb-1">Net Pay</div>
               <div className="mono text-2xl font-bold text-emerald-400">{formatMoney(model.netPay)}</div>
-              <div className="mono text-xs text-emerald-400/60 mt-0.5">{takeHomeRate.toFixed(1)}% take-home</div>
+              <div className="mono text-xs text-white-400/60 mt-0.5">{takeHomeRate.toFixed(1)}% take-home</div>
             </div>
           </div>
           {/* Take-home bar */}
@@ -68,20 +68,7 @@ export default function TaxCalculator({ model }) {
 
       {/* Right — info + annualised */}
       <div className="flex flex-col gap-5">
-        {/* Method */}
-        <div className="glass rounded-2xl p-6 fade-up fade-up-2">
-          <h2 className="text-xs font-semibold uppercase tracking-widest text-white-500 mb-3">Calculation Method</h2>
-          <p className="text-sm text-white-400 leading-relaxed mb-4">
-            Uses the ATO NAT1005 weekly lookup: truncate income, find the last matching threshold row, then apply:
-          </p>
-          <div className="rounded-xl font-mono text-sm px-5 py-4 text-emerald-300" style={{
-            background: "rgba(110,231,183,0.05)",
-            border: "1px solid rgba(110,231,183,0.15)"
-          }}>
-            ROUND((income + 0.99) × rate − base, 0)
-          </div>
-        </div>
-
+      
         {/* ATO note */}
         <div className="rounded-2xl p-5 fade-up fade-up-3" style={{
           background: "rgba(251,146,60,0.05)",
@@ -99,7 +86,7 @@ export default function TaxCalculator({ model }) {
           <div className="grid grid-cols-3 gap-3">
             {[
               { label: "Gross",  value: model.grossIncome * 52, color: "text-indigo-400" },
-              { label: "PAYG",   value: model.payg * 52,        color: "text-rose-400"   },
+              { label: "PAYG",   value: model.payg * 52,        color: "text-orange-400" },
               { label: "Net",    value: model.netPay * 52,      color: "text-emerald-400"},
             ].map(({ label, value, color }) => (
               <div key={label} className="rounded-xl p-3 text-center" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
