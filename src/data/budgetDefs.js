@@ -1,7 +1,7 @@
 export const budgetDefs = {
   needs: [
-    { id: "rent", label: "Rent (Virtual)", mode: "fixed", value: 193.75, note: "Fortnightly rent ÷ 4 ÷ number of people ÷ 2 weeks", account: "Bills" },
-    { id: "electricity", label: "Electricity (Virtual)", mode: "pctOfCategory", value: 0.04, note: "Average payment ÷ 4 ÷ 4", account: "Bills" },
+    { id: "rent", label: "Rent", mode: "fixed", value: 193.75, note: "Fortnightly rent ÷ 4 ÷ number of people ÷ 2 weeks", account: "Bills" },
+    { id: "electricity", label: "Electricity", mode: "pctOfCategory", value: 0.04, note: "Average payment ÷ 4 ÷ 4", account: "Bills" },
     { id: "internet", label: "Internet", mode: "fixed", value: 5.625, note: "Payment ÷ 4 ÷ 4", account: "Bills" },
     { id: "phone", label: "Phone", mode: "fixed", value: 12.5, note: "About $50/month", account: "Bills" },
     { id: "groceries", label: "Groceries / Food", mode: "fixed", value: 120, note: "About $120/week", account: "Float" },

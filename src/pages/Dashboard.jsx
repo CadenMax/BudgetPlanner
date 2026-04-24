@@ -8,7 +8,7 @@ import {
   TrendingUp,
   Rocket
 } from "lucide-react";
-import { MetricCard, Field, SectionTable } from "../components/ui";
+import { MetricCard, Field, SectionTable, AccountSummary } from "../components/ui";
 
 
 export default function Dashboard({ model }) {
@@ -93,6 +93,12 @@ export default function Dashboard({ model }) {
             onAddItem={model.addItem}
           />
         ))}
+      </div>
+
+      {/* Account summary */}
+      <div>
+        <h2 className="text-xs font-semibold uppercase tracking-widest text-white/50 mb-4 fade-up">Account Summary</h2>
+        <AccountSummary accountTotals={model.accountTotals} />
       </div>
     </div>
   );

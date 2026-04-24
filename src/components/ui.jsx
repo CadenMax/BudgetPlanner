@@ -194,6 +194,104 @@ function Checkbox({ checked, onChange, accentColor }) {
   );
 }
 
+// ── Account Summary ──────────────────────────────────────────────────────────
+export function AccountSummary({ accountTotals }) {
+  if (!accountTotals || accountTotals.length === 0) return null;
+
+  const grandTotal = accountTotals.reduce((sum, { total }) => sum + total, 0);
+
+  // Assign a stable accent colour to each account
+  const ACCOUNT_COLORS = {
+    Float:            "#6ee7b7", // emerald
+    Bills:            "#818cf8", // indigo
+    Subscriptions:    "#fb923c", // orange
+    "Emergency Fund": "#f472b6", // pink
+    Investments:      "#34d399", // teal
+    Medical:          "#60a5fa", // blue
+    Savings:          "#a78bfa", // violet
+    "Bigger Purchase":"#fbbf24", // amber
+  };
+  const FALLBACK_COLORS = ["#e879f9","#4ade80","#f59e0b","#38bdf8","#ff6b6b"];
+  let fallbackIdx = 0;
+  const colorFor = (name) =>
+    ACCOUNT_COLORS[name] ?? FALLBACK_COLORS[fallbackIdx++ % FALLBACK_COLORS.length];
+
+  return (
+    <div className="glass rounded-2xl overflow-hidden">
+      {/* Header */}
+      <div className="px-6 py-4 border-b border-white/5">
+        <h3 className="text-base font-bold text-white/80">Account Totals</h3>
+        <p className="text-xs text-white/40 mt-0.5 mono">
+          Where your money lands each week
+        </p>
+      </div>
+
+      {/* Stacked bar */}
+      <div className="px-6 pt-4">
+        <div className="flex rounded-lg overflow-hidden h-3 gap-0.5">
+          {accountTotals.map(({ account, total }) => {
+            const pct = grandTotal > 0 ? (total / grandTotal) * 100 : 0;
+            const color = colorFor(account);
+            return (
+              <div
+                key={account}
+                className="transition-all duration-700"
+                style={{ width: `${pct}%`, background: color, minWidth: pct > 0 ? 2 : 0 }}
+                title={`${account}: ${((total / grandTotal) * 100).toFixed(1)}%`}
+              />
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Row list */}
+      <div className="divide-y divide-white/[0.04] px-6 pb-2 mt-3">
+        {accountTotals.map(({ account, total }) => {
+          const pct = grandTotal > 0 ? (total / grandTotal) * 100 : 0;
+          const color = colorFor(account);
+          return (
+            <div key={account} className="flex items-center justify-between py-3 gap-4">
+              <div className="flex items-center gap-3 min-w-0">
+                <span
+                  className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                  style={{ background: color, boxShadow: `0 0 6px ${color}88` }}
+                />
+                <span className="text-sm font-medium text-white/70 truncate">{account}</span>
+              </div>
+              <div className="flex items-center gap-4 flex-shrink-0">
+                <div className="w-28 bg-white/5 rounded-full h-1 overflow-hidden">
+                  <div
+                    className="h-1 rounded-full transition-all duration-700"
+                    style={{ width: `${pct}%`, background: color }}
+                  />
+                </div>
+                <span className="text-xs text-white/30 w-10 text-right mono">{pct.toFixed(0)}%</span>
+                <span className="mono text-sm font-bold text-white/80 w-24 text-right">
+                  {formatMoney(total)}
+                </span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Grand total footer */}
+      <div className="px-6 py-3 border-t border-white/5 flex justify-between items-center">
+        <span className="text-xs font-semibold uppercase tracking-widest text-white/30">Total allocated</span>
+        <span className="mono text-base font-bold text-white/70">{formatMoney(grandTotal)}</span>
+      </div>
+
+      {/* Footnote */}
+      <div className="px-6 pb-4">
+        <p className="text-xs text-white/25 italic">
+          Investments includes all unallocated budget leftover from needs, wants &amp; savings buckets.
+          {" "}Bigger Purchase is carved out of that freed capital first.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 // ── Section Table ────────────────────────────────────────────────────────────
 export function SectionTable({ section, onUpdateItem, onRemoveItem, onAddItem }) {
   const c = colorConfig[section.color] || colorConfig.green;

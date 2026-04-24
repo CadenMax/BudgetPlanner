@@ -14,6 +14,31 @@ export const formatMoney = (n) => {
   return rounded < 0 ? `-${formatted}` : formatted;
 };
 
+// Logic to aggregate totals by account
+const getAccountTotals = (budgetItems) => {
+  const totals = {};
+
+  budgetItems.forEach((item) => {
+    // We only care about items that have a numerical value/cost
+    // Assuming 'item.value' is where the cost is stored
+    const amount = item.value || 0;
+    const accountName = item.account || "Uncategorized";
+
+    if (amount > 0) {
+      if (!totals[accountName]) {
+        totals[accountName] = 0;
+      }
+      totals[accountName] += amount;
+    }
+  });
+
+  // Convert to array for easier mapping in JSX
+  return Object.entries(totals).map(([account, total]) => ({
+    account,
+    total,
+  })).sort((a, b) => b.total - a.total); // Sort highest to lowest
+};
+
 export const formatPct = (n) => `${(n * 100).toFixed(1)}%`;
 
 export const sum = (values) =>

@@ -135,9 +135,39 @@ export function useBudgetModel() {
     return total;
   }, [sections, resolved]);
 
-  const freeloaderMoney       = needsRemaining + freedBills;
-  const totalFreed            = freedBills + wantsRemaining + freeloaderMoney + savingsRemaining;
-  const remainderToInvestments = totalFreed - biggerPurchase;
+  const freeloaderMoney = needsRemaining + freedBills;
+
+  // Total leftover = everything unspent across all three buckets
+  const totalLeftover          = needsRemaining + wantsRemaining + savingsRemaining;
+  // Bigger purchase carves out of that leftover first; remainder goes to investments
+  const remainderToInvestments = totalLeftover - biggerPurchase;
+  // Keep totalFreed as an alias for anything referencing it
+  const totalFreed             = totalLeftover;
+
+  // --- Account totals: sum computed values grouped by account name ---
+  // Leftover money (needsRemaining + wantsRemaining + savingsRemaining) goes to
+  // Investments, minus any bigger purchase carve-out.
+  const accountTotals = useMemo(() => {
+    const totals = {};
+    for (const [key, items] of Object.entries(sections)) {
+      for (const item of items) {
+        const computed = resolved[key]?.[item.id] ?? 0;
+        const account = item.account || "Uncategorized";
+        totals[account] = (totals[account] ?? 0) + computed;
+      }
+    }
+    // Unallocated leftover flows to Investments (after bigger purchase is carved out)
+    if (remainderToInvestments > 0) {
+      totals["Investments"] = (totals["Investments"] ?? 0) + remainderToInvestments;
+    }
+    // Bigger purchase shown as its own line
+    if (biggerPurchase > 0) {
+      totals["Bigger Purchase"] = (totals["Bigger Purchase"] ?? 0) + biggerPurchase;
+    }
+    return Object.entries(totals)
+      .map(([account, total]) => ({ account, total }))
+      .sort((a, b) => b.total - a.total);
+  }, [sections, resolved, remainderToInvestments, biggerPurchase]);
 
   const sectionMeta = [
     { key: "needs",   title: "Needs",   color: "green",  total: needsBudget,   spent: needsTotal,   remaining: needsRemaining   },
@@ -166,5 +196,6 @@ export function useBudgetModel() {
     needsRemaining, wantsRemaining, savingsRemaining,
     freeloaderMoney, totalFreed, remainderToInvestments,
     addItem, removeItem, updateItem, setItemValue,
+    accountTotals,
   };
 }
