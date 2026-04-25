@@ -1,0 +1,7 @@
+services:
+  budgetplanner:
+    build: .
+    container_name: budgetplanner
+    restart: unless-stopped
+    ports:
+      - "3684:80"   # Change 3000 to whatever port you want on your server
