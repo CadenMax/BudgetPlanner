@@ -295,7 +295,6 @@ export function AccountSummary({ accountTotals, leftoverDestination = "Investmen
       <div className="px-6 pb-4">
         <p className="text-xs text-white/25 italic">
           {destinationLabel} includes all unallocated budget leftover from needs, wants &amp; savings buckets.
-          {" "}Bigger Purchase is carved out of that freed capital first.
         </p>
       </div>
     </div>

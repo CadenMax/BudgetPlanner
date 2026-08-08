@@ -44,8 +44,7 @@ export default function Dashboard({ model }) {
           <h2 className="text-xs font-semibold uppercase tracking-widest text-white/50">Income Inputs</h2>
           <Field label="Hours worked / week" value={model.hoursWorked} onChange={model.setHoursWorked} step="0.5" />
           <Field label="Hourly rate" value={model.hourlyRate} onChange={model.setHourlyRate} />
-          <Field label="Extra income" value={model.extraIncome} onChange={model.setExtraIncome} />
-          <Field label="Bigger purchase" value={model.biggerPurchase} onChange={model.setBiggerPurchase} />
+          <Field label="Non-taxable income" value={model.nonTaxableIncome} onChange={model.setNonTaxableIncome} />
 
           <label className="flex flex-col gap-2">
             <span className="text-xs font-semibold uppercase tracking-widest text-white/50">Leftover destination</span>
@@ -110,7 +109,7 @@ export default function Dashboard({ model }) {
         <div className="flex flex-col gap-4">
           <h2 className="text-xs font-semibold uppercase tracking-widest text-white/50 fade-up">Income Summary</h2>
           <div className="grid grid-cols-2 gap-4">
-            <MetricCard label="Gross income" value={model.grossIncome} hint="Hours × rate + extra" color="indigo" delay="fade-up-1" />
+            <MetricCard label="Gross income" value={model.grossIncome} hint="Hours × rate + non-taxable" color="indigo" delay="fade-up-1" />
             <MetricCard label="PAYG withheld" value={model.payg} hint={model.taxProfile} color="orange" delay="fade-up-2" />
           </div>
           <MetricCard label="Net pay" value={model.netPay} hint="Take-home after tax" color="green" delay="fade-up-3" />
@@ -159,7 +158,7 @@ export default function Dashboard({ model }) {
           <MetricCard
             label={model.leftoverDestination === "None" ? "Remainder unallocated" : `Remainder to ${model.leftoverDestination}`}
             value={model.remainderToInvestments}
-            hint="Total freed minus bigger purchase"
+            hint="Total freed remaining after expenses"
             color="green"
             delay="fade-up-1"
           />

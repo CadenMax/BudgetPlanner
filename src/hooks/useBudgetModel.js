@@ -44,10 +44,9 @@ function saveToStorage(key, value) {
 export function useBudgetModel() {
   const [hoursWorked,              setHoursWorkedRaw]              = useState(() => loadFromStorage("bp_hoursWorked",              0));
   const [hourlyRate,               setHourlyRateRaw]               = useState(() => loadFromStorage("bp_hourlyRate",               0));
-  const [extraIncome,              setExtraIncomeRaw]              = useState(() => loadFromStorage("bp_extraIncome",              0));
+  const [nonTaxableIncome,         setNonTaxableIncomeRaw]         = useState(() => loadFromStorage("bp_nonTaxableIncome",         loadFromStorage("bp_extraIncome", 0)));
   const [taxYear,                  setTaxYearRaw]                  = useState(() => loadFromStorage("bp_taxYear",                  defaultTaxYear));
   const [taxProfile,               setTaxProfileRaw]               = useState(() => loadFromStorage("bp_taxProfile",               "Standard - tax-free threshold"));
-  const [biggerPurchase,           setBiggerPurchaseRaw]           = useState(() => loadFromStorage("bp_biggerPurchase",           0));
   const [leftoverDestination,      setLeftoverDestinationRaw]      = useState(() => loadFromStorage("bp_leftoverDestination",      "None"));
   const [freeloaderEnabled,        setFreeloaderEnabledRaw]        = useState(() => loadFromStorage("bp_freeloaderEnabled",        true));
   const [sections,                 setSectionsRaw]                 = useState(() => loadFromStorage("bp_sections",                 defaultSections));
@@ -65,9 +64,9 @@ export function useBudgetModel() {
   const persist = (key, setter) => (val) => { setter(val); saveToStorage(key, val); };
   const setHoursWorked          = persist("bp_hoursWorked",          setHoursWorkedRaw);
   const setHourlyRate           = persist("bp_hourlyRate",           setHourlyRateRaw);
-  const setExtraIncome          = persist("bp_extraIncome",          setExtraIncomeRaw);
+  const setNonTaxableIncome     = persist("bp_nonTaxableIncome",     setNonTaxableIncomeRaw);
+  const setExtraIncome          = setNonTaxableIncome;
   const setTaxProfile           = persist("bp_taxProfile",           setTaxProfileRaw);
-  const setBiggerPurchase       = persist("bp_biggerPurchase",       setBiggerPurchaseRaw);
   const setLeftoverDestination  = persist("bp_leftoverDestination",  setLeftoverDestinationRaw);
   const setFreeloaderEnabled    = persist("bp_freeloaderEnabled",    setFreeloaderEnabledRaw);
 
@@ -92,10 +91,10 @@ export function useBudgetModel() {
     exportedAt: new Date().toISOString(),
     hoursWorked,
     hourlyRate,
-    extraIncome,
+    nonTaxableIncome,
+    extraIncome: nonTaxableIncome,
     taxYear,
     taxProfile: resolvedTaxProfile,
-    biggerPurchase,
     leftoverDestination: normalizedLeftoverDestination,
     freeloaderEnabled,
     sections,
@@ -118,11 +117,12 @@ export function useBudgetModel() {
       ? payload.leftoverDestination
       : "None";
 
+    const nextNonTaxableIncome = Number(payload.nonTaxableIncome ?? payload.extraIncome ?? nonTaxableIncome) || 0;
+
     const nextValues = {
       hoursWorked: Number(payload.hoursWorked ?? hoursWorked) || 0,
       hourlyRate: Number(payload.hourlyRate ?? hourlyRate) || 0,
-      extraIncome: Number(payload.extraIncome ?? extraIncome) || 0,
-      biggerPurchase: Number(payload.biggerPurchase ?? biggerPurchase) || 0,
+      nonTaxableIncome: nextNonTaxableIncome,
       freeloaderEnabled: Boolean(payload.freeloaderEnabled ?? freeloaderEnabled),
       taxYear: nextTaxYear,
       taxProfile: nextProfile,
@@ -132,8 +132,7 @@ export function useBudgetModel() {
 
     setHoursWorkedRaw(nextValues.hoursWorked);
     setHourlyRateRaw(nextValues.hourlyRate);
-    setExtraIncomeRaw(nextValues.extraIncome);
-    setBiggerPurchaseRaw(nextValues.biggerPurchase);
+    setNonTaxableIncomeRaw(nextValues.nonTaxableIncome);
     setFreeloaderEnabledRaw(nextValues.freeloaderEnabled);
     setTaxYearRaw(nextValues.taxYear);
     setTaxProfileRaw(nextValues.taxProfile);
@@ -142,8 +141,8 @@ export function useBudgetModel() {
 
     saveToStorage("bp_hoursWorked", nextValues.hoursWorked);
     saveToStorage("bp_hourlyRate", nextValues.hourlyRate);
-    saveToStorage("bp_extraIncome", nextValues.extraIncome);
-    saveToStorage("bp_biggerPurchase", nextValues.biggerPurchase);
+    saveToStorage("bp_nonTaxableIncome", nextValues.nonTaxableIncome);
+    saveToStorage("bp_extraIncome", nextValues.nonTaxableIncome);
     saveToStorage("bp_freeloaderEnabled", nextValues.freeloaderEnabled);
     saveToStorage("bp_taxYear", nextValues.taxYear);
     saveToStorage("bp_taxProfile", nextValues.taxProfile);
@@ -183,15 +182,19 @@ export function useBudgetModel() {
   };
 
   // --- Calculations ---
+  const taxableIncome = useMemo(
+    () => hoursWorked * hourlyRate,
+    [hoursWorked, hourlyRate]
+  );
   const grossIncome = useMemo(
-    () => hoursWorked * hourlyRate + extraIncome,
-    [hoursWorked, hourlyRate, extraIncome]
+    () => taxableIncome + nonTaxableIncome,
+    [taxableIncome, nonTaxableIncome]
   );
   const payg = useMemo(
-    () => lookupWithholding(grossIncome, taxTables[taxYear]?.[resolvedTaxProfile] ?? taxTables[defaultTaxYear][resolvedTaxProfile] ?? []),
-    [grossIncome, taxYear, resolvedTaxProfile]
+    () => lookupWithholding(taxableIncome, taxTables[taxYear]?.[resolvedTaxProfile] ?? taxTables[defaultTaxYear][resolvedTaxProfile] ?? []),
+    [taxableIncome, taxYear, resolvedTaxProfile]
   );
-  const netPay = useMemo(() => grossIncome - payg, [grossIncome, payg]);
+  const netPay = useMemo(() => taxableIncome - payg + nonTaxableIncome, [taxableIncome, payg, nonTaxableIncome]);
 
   const needsBudget   = netPay * 0.5;
   const wantsBudget   = netPay * 0.3;
@@ -253,8 +256,8 @@ export function useBudgetModel() {
 
   // Total leftover = everything unspent across all three buckets
   const totalLeftover          = needsRemaining + wantsRemaining + savingsRemaining;
-  // Bigger purchase carves out of that leftover first; remainder goes to the selected account
-  const remainderToInvestments = totalLeftover - biggerPurchase;
+  // All remaining money flows to the selected account when one is chosen.
+  const remainderToInvestments = totalLeftover;
   // Keep totalFreed as an alias for anything referencing it
   const totalFreed             = totalLeftover;
 
@@ -278,14 +281,10 @@ export function useBudgetModel() {
       totals[normalizedLeftoverDestination] = (totals[normalizedLeftoverDestination] ?? 0) + remainderToInvestments;
     }
 
-    // Bigger purchase shown as its own line
-    if (biggerPurchase > 0) {
-      totals["Bigger Purchase"] = (totals["Bigger Purchase"] ?? 0) + biggerPurchase;
-    }
     return Object.entries(totals)
       .map(([account, total]) => ({ account, total }))
       .sort((a, b) => b.total - a.total);
-  }, [sections, resolved, remainderToInvestments, biggerPurchase, normalizedLeftoverDestination, freeloaderEnabled]);
+  }, [sections, resolved, remainderToInvestments, normalizedLeftoverDestination, freeloaderEnabled]);
 
   const sectionMeta = [
     { key: "needs",   title: "Needs",   color: "green",  total: needsBudget,   spent: needsTotal,   remaining: needsRemaining   },
@@ -305,12 +304,13 @@ export function useBudgetModel() {
   return {
     hoursWorked, setHoursWorked,
     hourlyRate,  setHourlyRate,
-    extraIncome, setExtraIncome,
+    nonTaxableIncome, setNonTaxableIncome,
+    extraIncome: nonTaxableIncome,
+    setExtraIncome,
     taxYear, setTaxYear,
     taxProfile: resolvedTaxProfile,
     taxProfiles: availableTaxProfiles,
     setTaxProfile,
-    biggerPurchase, setBiggerPurchase,
     leftoverDestination: normalizedLeftoverDestination,
     setLeftoverDestination,
     leftoverAccountOptions,
@@ -318,7 +318,7 @@ export function useBudgetModel() {
     setFreeloaderEnabled,
     exportBudgetData,
     importBudgetData,
-    grossIncome, payg, netPay,
+    taxableIncome, grossIncome, payg, netPay,
     budgetSections,
     needsBudget, wantsBudget, savingsBudget,
     needsRemaining, wantsRemaining, savingsRemaining,

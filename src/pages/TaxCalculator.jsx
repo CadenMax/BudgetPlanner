@@ -3,7 +3,7 @@ import { formatMoney, formatPct } from "../utils/format";
 import { Field, Select } from "../components/ui";
 
 export default function TaxCalculator({ model }) {
-  const effectiveRate = model.grossIncome > 0 ? (model.payg / model.grossIncome) * 100 : 0;
+  const effectiveRate = model.taxableIncome > 0 ? (model.payg / model.taxableIncome) * 100 : 0;
   const takeHomeRate = model.grossIncome > 0 ? (model.netPay / model.grossIncome) * 100 : 0;
 
   return (
@@ -15,7 +15,7 @@ export default function TaxCalculator({ model }) {
           <h2 className="text-xs font-semibold uppercase tracking-widest ">Your Details</h2>
           <Field label="Weekly hours" value={model.hoursWorked} onChange={model.setHoursWorked} step="0.5" />
           <Field label="Hourly rate"  value={model.hourlyRate}  onChange={model.setHourlyRate} />
-          <Field label="Extra income" value={model.extraIncome} onChange={model.setExtraIncome} />
+          <Field label="Non-taxable income" value={model.nonTaxableIncome} onChange={model.setNonTaxableIncome} />
           <Select
             label="Financial year"
             value={model.taxYear}
