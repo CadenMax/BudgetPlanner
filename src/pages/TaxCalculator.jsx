@@ -1,4 +1,4 @@
-import { taxTables } from "../data/taxTables";
+import { taxYears } from "../data/taxTables";
 import { formatMoney, formatPct } from "../utils/format";
 import { Field, Select } from "../components/ui";
 
@@ -17,10 +17,16 @@ export default function TaxCalculator({ model }) {
           <Field label="Hourly rate"  value={model.hourlyRate}  onChange={model.setHourlyRate} />
           <Field label="Extra income" value={model.extraIncome} onChange={model.setExtraIncome} />
           <Select
+            label="Financial year"
+            value={model.taxYear}
+            onChange={model.setTaxYear}
+            options={taxYears}
+          />
+          <Select
             label="Tax profile"
             value={model.taxProfile}
             onChange={model.setTaxProfile}
-            options={Object.keys(taxTables)}
+            options={model.taxProfiles}
           />
         </div>
 
@@ -76,7 +82,7 @@ export default function TaxCalculator({ model }) {
         }}>
           <div className="text-xs font-semibold uppercase tracking-widest text-orange-400 mb-2">ATO Note</div>
           <p className="text-sm text-orange-200/60 leading-relaxed">
-            Weekly tax table applies from 1 July 2025 and continues after the 24 September 2026 update.
+            Weekly tax table applies for the selected financial year and can be updated by changing the year profile data in the tax table config.
           </p>
         </div>
 

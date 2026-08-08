@@ -1,4 +1,4 @@
-export const taxTables = {
+const legacyTaxProfiles = {
   "Standard - no tax-free threshold": [
     { threshold: 0.0, rate: 0.16, base: 0.16 },
     { threshold: 150.0, rate: 0.2117, base: 7.755 },
@@ -252,6 +252,14 @@ export const taxTables = {
     { threshold: 1013.0, rate: 0.0, base: 0.0 },
     { threshold: 1584.0, rate: 0.0, base: 0.0 },
   ],
+};
+
+export const taxYears = ["2026-27", "2025-26"];
+export const defaultTaxYear = taxYears[0];
+
+export const taxTables = {
+  "2026-27": { ...legacyTaxProfiles },
+  "2025-26": { ...legacyTaxProfiles },
 };
 
 export const whmTable = [

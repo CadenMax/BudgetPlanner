@@ -1,9 +1,9 @@
-import { taxTables, whmTable } from "../data/taxTables";
+import { taxTables, whmTable, taxYears } from "../data/taxTables";
 import { formatMoney, formatPct } from "../utils/format";
 import { Select } from "../components/ui";
 
 export default function LookupTables({ model }) {
-  const table = taxTables[model.taxProfile];
+  const table = taxTables[model.taxYear]?.[model.taxProfile] ?? [];
 
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_1fr]">
@@ -14,10 +14,16 @@ export default function LookupTables({ model }) {
         <div className="glass rounded-2xl p-6 fade-up">
           <h2 className="text-xs font-semibold uppercase tracking-widest text-white-500 mb-4">Select Table</h2>
           <Select
+            label="Financial year"
+            value={model.taxYear}
+            onChange={model.setTaxYear}
+            options={taxYears}
+          />
+          <Select
             label="Tax Table"
             value={model.taxProfile}
             onChange={model.setTaxProfile}
-            options={Object.keys(taxTables)}
+            options={model.taxProfiles}
           />
           <div className="mt-4 rounded-xl px-4 py-3 text-xs text-indigo-300/70 leading-relaxed" style={{
             background: "rgba(129,140,248,0.05)",
@@ -97,7 +103,7 @@ export default function LookupTables({ model }) {
         <div className="glass rounded-2xl p-5 fade-up fade-up-3">
           <h3 className="text-xs font-semibold uppercase tracking-widest text-white-500 mb-3">All Available Tables</h3>
           <div className="flex flex-col gap-1">
-            {Object.entries(taxTables).map(([name, rows]) => (
+            {Object.entries(taxTables[model.taxYear] ?? {}).map(([name, rows]) => (
               <button
                 key={name}
                 onClick={() => model.setTaxProfile(name)}

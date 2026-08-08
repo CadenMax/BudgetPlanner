@@ -92,7 +92,7 @@ export function Select({ label, value, onChange, options }) {
 }
 
 // ── Add-item inline form ────────────────────────────────────────────────────
-function AddItemForm({ sectionKey, onAdd, onCancel, accentColor }) {
+function AddItemForm({ sectionKey, onAdd, onCancel, accentColor, freeloaderEnabled = true }) {
   const [label, setLabel] = React.useState("");
   const [mode, setMode] = React.useState("fixed");
   const [value, setValue] = React.useState(0);
@@ -107,7 +107,7 @@ function AddItemForm({ sectionKey, onAdd, onCancel, accentColor }) {
       label: label.trim(),
       mode,
       value: Number(value),
-      account: account.trim() || "Float",
+      account: account.trim(),
       note: note.trim(),
       isFreeloader,
     });
@@ -155,10 +155,12 @@ function AddItemForm({ sectionKey, onAdd, onCancel, accentColor }) {
               <div className="text-xs text-white/30 mb-1">{mode === "fixed" ? "Amount ($)" : "Percentage (e.g. 0.1 = 10%)"}</div>
               <NumericInput value={value} onChange={setValue} />
             </div>
-            <div className="flex items-center gap-2 pt-4">
-              <Checkbox checked={isFreeloader} onChange={setIsFreeloader} accentColor={accentColor} />
-              <span className="text-xs text-white/50">Freeloader item</span>
-            </div>
+            {freeloaderEnabled && (
+              <div className="flex items-center gap-2 pt-4">
+                <Checkbox checked={isFreeloader} onChange={setIsFreeloader} accentColor={accentColor} />
+                <span className="text-xs text-white/50">Freeloader item</span>
+              </div>
+            )}
             <div className="flex gap-2 justify-end pt-4">
               <button onClick={onCancel} className="px-3 py-2 text-xs text-white/40 hover:text-white/70 transition-colors">Cancel</button>
               <button
@@ -195,26 +197,34 @@ function Checkbox({ checked, onChange, accentColor }) {
 }
 
 // ── Account Summary ──────────────────────────────────────────────────────────
-export function AccountSummary({ accountTotals }) {
+export function AccountSummary({ accountTotals, leftoverDestination = "Investments" }) {
   if (!accountTotals || accountTotals.length === 0) return null;
 
   const grandTotal = accountTotals.reduce((sum, { total }) => sum + total, 0);
+  const destinationLabel = leftoverDestination && leftoverDestination !== "None" ? leftoverDestination : "Unallocated leftover";
 
-  // Assign a stable accent colour to each account
-  const ACCOUNT_COLORS = {
-    Float:            "#6ee7b7", // emerald
-    Bills:            "#818cf8", // indigo
-    Subscriptions:    "#fb923c", // orange
-    "Emergency Fund": "#f472b6", // pink
-    Investments:      "#34d399", // teal
-    Medical:          "#60a5fa", // blue
-    Savings:          "#a78bfa", // violet
-    "Bigger Purchase":"#fbbf24", // amber
+  const BASE_COLORS = [
+    "hsl(170 70% 58%)",
+    "hsl(235 72% 64%)",
+    "hsl(32 88% 62%)",
+    "hsl(330 80% 68%)",
+    "hsl(145 65% 58%)",
+    "hsl(208 78% 63%)",
+    "hsl(48 86% 60%)",
+    "hsl(270 72% 68%)",
+    "hsl(12 82% 62%)",
+    "hsl(190 72% 58%)",
+  ];
+
+  const colorFor = (name, index) => {
+    if (index < BASE_COLORS.length) return BASE_COLORS[index];
+
+    const seed = [...name].reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
+    const hue = (seed * 179 + index * 97) % 360;
+    const saturation = 72;
+    const lightness = 60;
+    return `hsl(${hue} ${saturation}% ${lightness}%)`;
   };
-  const FALLBACK_COLORS = ["#e879f9","#4ade80","#f59e0b","#38bdf8","#ff6b6b"];
-  let fallbackIdx = 0;
-  const colorFor = (name) =>
-    ACCOUNT_COLORS[name] ?? FALLBACK_COLORS[fallbackIdx++ % FALLBACK_COLORS.length];
 
   return (
     <div className="glass rounded-2xl overflow-hidden">
@@ -229,9 +239,9 @@ export function AccountSummary({ accountTotals }) {
       {/* Stacked bar */}
       <div className="px-6 pt-4">
         <div className="flex rounded-lg overflow-hidden h-3 gap-0.5">
-          {accountTotals.map(({ account, total }) => {
+          {accountTotals.map(({ account, total }, index) => {
             const pct = grandTotal > 0 ? (total / grandTotal) * 100 : 0;
-            const color = colorFor(account);
+            const color = colorFor(account, index);
             return (
               <div
                 key={account}
@@ -246,9 +256,9 @@ export function AccountSummary({ accountTotals }) {
 
       {/* Row list */}
       <div className="divide-y divide-white/[0.04] px-6 pb-2 mt-3">
-        {accountTotals.map(({ account, total }) => {
+        {accountTotals.map(({ account, total }, index) => {
           const pct = grandTotal > 0 ? (total / grandTotal) * 100 : 0;
-          const color = colorFor(account);
+          const color = colorFor(account, index);
           return (
             <div key={account} className="flex items-center justify-between py-3 gap-4">
               <div className="flex items-center gap-3 min-w-0">
@@ -284,7 +294,7 @@ export function AccountSummary({ accountTotals }) {
       {/* Footnote */}
       <div className="px-6 pb-4">
         <p className="text-xs text-white/25 italic">
-          Investments includes all unallocated budget leftover from needs, wants &amp; savings buckets.
+          {destinationLabel} includes all unallocated budget leftover from needs, wants &amp; savings buckets.
           {" "}Bigger Purchase is carved out of that freed capital first.
         </p>
       </div>
@@ -293,12 +303,15 @@ export function AccountSummary({ accountTotals }) {
 }
 
 // ── Section Table ────────────────────────────────────────────────────────────
-export function SectionTable({ section, onUpdateItem, onRemoveItem, onAddItem }) {
+export function SectionTable({ section, onUpdateItem, onRemoveItem, onAddItem, freeloaderEnabled = true }) {
   const c = colorConfig[section.color] || colorConfig.green;
   const pct = section.total > 0 ? Math.min(100, (section.spent / section.total) * 100) : 0;
   const over = section.spent > section.total;
   const accentColor = section.color === "green" ? "#6ee7b7" : section.color === "indigo" ? "#818cf8" : "#fb923c";
   const [showAddForm, setShowAddForm] = React.useState(false);
+  const headers = freeloaderEnabled
+    ? ["Item", "Type", "Value", "Calculated", "Account", "Freeloader", "Notes"]
+    : ["Item", "Type", "Value", "Calculated", "Account", "Notes"];
 
   const handleAdd = (newItem) => {
     onAddItem(section.sectionKey, newItem);
@@ -337,7 +350,7 @@ export function SectionTable({ section, onUpdateItem, onRemoveItem, onAddItem })
         <table className="min-w-full text-sm">
           <thead>
             <tr className="border-b border-white/5">
-              {["Item", "Type", "Value", "Calculated", "Account", "Freeloader", "Notes"].map((h) => (
+              {headers.map((h) => (
                 <th key={h} className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-widest text-white/30">{h}</th>
               ))}
             </tr>
@@ -399,16 +412,17 @@ export function SectionTable({ section, onUpdateItem, onRemoveItem, onAddItem })
                   />
                 </td>
 
-                {/* Freeloader checkbox */}
-                <td className="px-5 py-3">
-                  <div className="flex items-center gap-2">
-                    <Checkbox
-                      checked={!!item.isFreeloader}
-                      onChange={(val) => onUpdateItem(section.sectionKey, item.id, { isFreeloader: val })}
-                      accentColor={accentColor}
-                    />
-                  </div>
-                </td>
+                {freeloaderEnabled && (
+                  <td className="px-5 py-3">
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        checked={!!item.isFreeloader}
+                        onChange={(val) => onUpdateItem(section.sectionKey, item.id, { isFreeloader: val })}
+                        accentColor={accentColor}
+                      />
+                    </div>
+                  </td>
+                )}
 
                 <td className="px-5 py-3 font-medium text-white-80 min-w-[140px]">
                   {item.note !== undefined && (
@@ -436,10 +450,10 @@ export function SectionTable({ section, onUpdateItem, onRemoveItem, onAddItem })
 
             {/* Add form or add button */}
             {showAddForm
-              ? <AddItemForm sectionKey={section.sectionKey} onAdd={handleAdd} onCancel={() => setShowAddForm(false)} accentColor={accentColor} />
+              ? <AddItemForm sectionKey={section.sectionKey} onAdd={handleAdd} onCancel={() => setShowAddForm(false)} accentColor={accentColor} freeloaderEnabled={freeloaderEnabled} />
               : (
                 <tr>
-                  <td colSpan={7} className="px-5 py-3">
+                  <td colSpan={freeloaderEnabled ? 7 : 6} className="px-5 py-3">
                     <button
                       onClick={() => setShowAddForm(true)}
                       className="flex items-center gap-2 text-xs font-semibold transition-colors hover:text-white/70"
