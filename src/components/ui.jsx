@@ -33,13 +33,17 @@ export function MetricCard({ label, value, hint, color = "green", icon, delay = 
 }
 
 // Shared focus-select input logic
-function NumericInput({ value, onChange, className = "" }) {
+function NumericInput({ value, onChange, className = "", variant = "default" }) {
   const [localValue, setLocalValue] = React.useState(String(value));
   const [focused, setFocused] = React.useState(false);
 
   React.useEffect(() => {
     if (!focused) setLocalValue(String(value));
   }, [value, focused]);
+
+  const inputClassName = variant === "inline"
+    ? `inline-edit-input ${className}`
+    : `input-dark ${className}`;
 
   return (
     <input
@@ -59,7 +63,7 @@ function NumericInput({ value, onChange, className = "" }) {
         onChange(final);
         setLocalValue(String(final));
       }}
-      className={`input-dark ${className}`}
+      className={inputClassName}
     />
   );
 }
@@ -192,7 +196,7 @@ function Checkbox({ checked, onChange, accentColor }) {
         boxShadow: checked ? `0 0 6px ${accentColor}55` : "none",
       }}
     >
-      {checked && <span style={{ color: accentColor, fontSize: 26, lineHeight: 1 }}>✓</span>}
+      {checked && <span style={{ color: accentColor, fontSize: 16, lineHeight: 1 }}>✓</span>}
     </button>
   );
 }
@@ -396,7 +400,8 @@ export function SectionTable({ section, onUpdateItem, onRemoveItem, onAddItem, f
                   <NumericInput
                     value={item.value}
                     onChange={(val) => onUpdateItem(section.sectionKey, item.id, { value: val })}
-                    className="w-24 text-left"
+                    variant="inline"
+                    className="w-24 text-left sm:w-28 md:w-32"
                   />
                 </td>
 
