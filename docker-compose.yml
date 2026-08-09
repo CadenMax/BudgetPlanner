@@ -1,7 +1,7 @@
 services:
-  budgetplanner:
+  budgetelite:
     build: .
-    container_name: budgetplanner
+    container_name: budgetelite
     restart: unless-stopped
     ports:
       - "3684:80"   # Change 3684 to whatever port you want on your server
