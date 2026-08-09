@@ -56,20 +56,20 @@ export default function BudgetPlannerApp() {
           </div>
 
           {/* Tab bar */}
-          <nav className="flex gap-1">
+          <nav className="flex flex-wrap gap-1.5 pb-1 sm:flex-nowrap sm:overflow-visible">
             {tabs.map(({ key, label, icon }) => (
               <button
                 key={key}
                 onClick={() => setTab(key)}
-                className={`btn-glow flex items-center gap-2.5 px-5 py-3 text-sm font-semibold rounded-t-xl transition-all ${
+                className={`btn-glow flex min-w-0 flex-1 items-center justify-center gap-2 px-3 py-2.5 text-[11px] font-semibold rounded-t-xl transition-all sm:flex-none sm:justify-start sm:px-4 sm:text-sm md:px-5 ${
                   tab === key
                     ? "tab-active"
                     : "text-gray-500 hover:text-gray-300 hover:bg-white/5"
                 }`}
                 style={tab === key ? { borderBottom: "2px solid #6ee7b7" } : { borderBottom: "2px solid transparent" }}
               >
-                <span className="text-base">{icon}</span>
-                {label}
+                <span className="shrink-0 text-base">{icon}</span>
+                <span className="truncate">{label}</span>
               </button>
             ))}
           </nav>

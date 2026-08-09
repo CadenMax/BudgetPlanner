@@ -68,11 +68,17 @@ export default function Dashboard({ model }) {
             <button
               type="button"
               onClick={() => model.setFreeloaderEnabled(!model.freeloaderEnabled)}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${model.freeloaderEnabled ? "bg-emerald-500" : "bg-white/10"}`}
+              className="freeloader-toggle"
+              style={{
+                background: model.freeloaderEnabled ? "rgba(16, 185, 129, 0.9)" : "rgba(255,255,255,0.08)",
+              }}
               aria-label="Toggle freeloader feature"
             >
               <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${model.freeloaderEnabled ? "translate-x-6" : "translate-x-1"}`}
+                className="freeloader-toggle-knob"
+                style={{
+                  transform: model.freeloaderEnabled ? "translateX(18px)" : "translateX(2px)",
+                }}
               />
             </button>
           </label>

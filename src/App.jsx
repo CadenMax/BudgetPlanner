@@ -1,4 +1,3 @@
-import './App.css'
 import BudgetPlannerApp from './BudgetPlannerApp'
 
 export default function App() {

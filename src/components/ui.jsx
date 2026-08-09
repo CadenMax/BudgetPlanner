@@ -120,7 +120,7 @@ function AddItemForm({ sectionKey, onAdd, onCancel, accentColor, freeloaderEnabl
       <td colSpan={6} className="px-5 py-4">
         <div className="rounded-xl p-4 flex flex-col gap-3" style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${accentColor}33` }}>
           <div className="text-xs font-semibold uppercase tracking-widest text-white/50 mb-1">New Item</div>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <div className="sm:col-span-2">
               <div className="text-xs text-white/30 mb-1">Label *</div>
               <input className={inputCls} placeholder="e.g. Netflix" value={label} onChange={(e) => setLabel(e.target.value)} />
@@ -135,7 +135,7 @@ function AddItemForm({ sectionKey, onAdd, onCancel, accentColor, freeloaderEnabl
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 items-end">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4 items-end">
             <div>
               <div className="text-xs text-white/30 mb-1">Type</div>
               <div className="flex rounded-lg overflow-hidden border border-white/10">
@@ -156,12 +156,12 @@ function AddItemForm({ sectionKey, onAdd, onCancel, accentColor, freeloaderEnabl
               <NumericInput value={value} onChange={setValue} />
             </div>
             {freeloaderEnabled && (
-              <div className="flex items-center gap-2 pt-4">
+              <div className="flex items-center gap-2 pt-4 sm:pt-0">
                 <Checkbox checked={isFreeloader} onChange={setIsFreeloader} accentColor={accentColor} />
                 <span className="text-xs text-white/50">Freeloader item</span>
               </div>
             )}
-            <div className="flex gap-2 justify-end pt-4">
+            <div className="flex flex-wrap gap-2 justify-end pt-4 sm:pt-0">
               <button onClick={onCancel} className="px-3 py-2 text-xs text-white/40 hover:text-white/70 transition-colors">Cancel</button>
               <button
                 onClick={handleSubmit}
@@ -183,15 +183,16 @@ function AddItemForm({ sectionKey, onAdd, onCancel, accentColor, freeloaderEnabl
 function Checkbox({ checked, onChange, accentColor }) {
   return (
     <button
+      type="button"
       onClick={() => onChange(!checked)}
-      className="w-5 h-5 rounded flex items-center justify-center flex-shrink-0 transition-all"
+      className="freeloader-checkbox"
       style={{
         background: checked ? accentColor + "33" : "rgba(255,255,255,0.05)",
         border: `1px solid ${checked ? accentColor : "rgba(255,255,255,0.15)"}`,
         boxShadow: checked ? `0 0 6px ${accentColor}55` : "none",
       }}
     >
-      {checked && <span style={{ color: accentColor, fontSize: 11, lineHeight: 1 }}>✓</span>}
+      {checked && <span style={{ color: accentColor, fontSize: 26, lineHeight: 1 }}>✓</span>}
     </button>
   );
 }
