@@ -1,7 +1,10 @@
 # ── Stage 1: Build ────────────────────────────────────────────────────────────
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 
 WORKDIR /app
+
+# better-sqlite3 may need to compile a native addon on Alpine.
+RUN apk add --no-cache python3 make g++
 
 # Install dependencies first (better layer caching)
 COPY package.json package-lock.json ./

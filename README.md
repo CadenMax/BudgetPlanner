@@ -34,7 +34,10 @@ Split your budget across multiple bank accounts. Know exactly which account gets
 Somestimes you may receive some money that isn't taxed, or already has taxed applied to it. In this scenario, you would want that number to be added to whatever your original income would be. You can also use this feature to directly add in your income from your payslip.
 
 ### Backup & Restore
-As everything is stored in LocalStorage, there is a feature to export and import a JSON file that can put you right back where you were before you cleared your cache.
+Budget data is stored on the server per account. The JSON export/import tools remain available as an additional backup option.
+
+### Accounts and server storage
+The Docker setup includes a Node API and SQLite database. Create an account in the app, then sign in from any device using the same address. The browser stores only an HTTP-only session cookie; budget values are stored in the database volume.
 
 ## How to use if you get a fixed income
 Some workers out there don't have casual jobs and actually receive a fixed income per year (I know, shocking right?) This tool can still be used by these lucky few, by changing what they spend, rather then what they receive. It is a handy tool to come back to each pay day to divy out your income properly, and then re-assess whenever you feel like you are putting money into the wrong places
@@ -177,9 +180,12 @@ docker compose up --build -d
 ### 10. Important notes for self-hosting
 
 - The app listens on port `3684` by default.
+- Account and budget data is stored in the persistent `budgetelite-data` Docker volume.
+- Do not delete that volume unless you have a separate database backup.
 - If you want it to be available on the internet, you need to open that port in your firewall or router.
 - If you want HTTPS (secure website access), you should place it behind a reverse proxy such as Nginx Proxy Manager or Caddy.
-- The app stores user data in the browser local storage, so it is not a database-backed app. That means your saved values are tied to the browser on that device.
+- The first account created on a browser can import that browser's existing budget automatically. After migration, budget changes are stored on the server.
+- Use HTTPS through a reverse proxy before exposing accounts to the internet.
 
 ### Common beginner troubleshooting
 

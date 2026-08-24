@@ -5,3 +5,17 @@ services:
     restart: unless-stopped
     ports:
       - "3684:80"   # Change 3684 to whatever port you want on your server
+    depends_on:
+      - api
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.server
+    container_name: budgetelite-api
+    restart: unless-stopped
+    volumes:
+      - budgetelite-data:/app/data
+
+volumes:
+  budgetelite-data:

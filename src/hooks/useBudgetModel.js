@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect } from "react";
-import { taxTables, taxYears, defaultTaxYear } from "../data/taxTables";
+import { taxTables, defaultTaxYear } from "../data/taxTables";
 import { budgetDefs } from "../data/budgetDefs";
 import { sum } from "../utils/format";
 
@@ -26,30 +26,41 @@ const defaultSections = {
   savings: budgetDefs.savings.map((item) => ({ ...item, isFreeloader: false })),
 };
 
-function loadFromStorage(key, fallback) {
-  try {
-    const raw = localStorage.getItem(key);
-    return raw ? JSON.parse(raw) : fallback;
-  } catch {
-    return fallback;
-  }
-}
-
-function saveToStorage(key, value) {
-  try {
-    localStorage.setItem(key, JSON.stringify(value));
-  } catch { }
+async function apiRequest(path, options = {}) {
+  const response = await fetch(path, {
+    ...options,
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json", ...(options.headers || {}) },
+  });
+  const body = response.status === 204 ? null : await response.json().catch(() => null);
+  if (!response.ok) throw new Error(body?.error || "Request failed");
+  return body;
 }
 
 export function useBudgetModel() {
-  const [hoursWorked, setHoursWorkedRaw] = useState(() => loadFromStorage("bp_hoursWorked", 0));
-  const [hourlyRate, setHourlyRateRaw] = useState(() => loadFromStorage("bp_hourlyRate", 0));
-  const [nonTaxableIncome, setNonTaxableIncomeRaw] = useState(() => loadFromStorage("bp_nonTaxableIncome", loadFromStorage("bp_extraIncome", 0)));
-  const [taxYear, setTaxYearRaw] = useState(() => loadFromStorage("bp_taxYear", defaultTaxYear));
-  const [taxProfile, setTaxProfileRaw] = useState(() => loadFromStorage("bp_taxProfile", "Standard - tax-free threshold"));
-  const [leftoverDestination, setLeftoverDestinationRaw] = useState(() => loadFromStorage("bp_leftoverDestination", "None"));
-  const [freeloaderEnabled, setFreeloaderEnabledRaw] = useState(() => loadFromStorage("bp_freeloaderEnabled", true));
-  const [sections, setSectionsRaw] = useState(() => loadFromStorage("bp_sections", defaultSections));
+  const [hoursWorked, setHoursWorkedRaw] = useState(0);
+  const [hourlyRate, setHourlyRateRaw] = useState(0);
+  const [nonTaxableIncome, setNonTaxableIncomeRaw] = useState(0);
+  const [taxYear, setTaxYearRaw] = useState(defaultTaxYear);
+  const [taxProfile, setTaxProfileRaw] = useState("Standard - tax-free threshold");
+  const [leftoverDestination, setLeftoverDestinationRaw] = useState("None");
+  const [freeloaderEnabled, setFreeloaderEnabledRaw] = useState(true);
+  const [sections, setSectionsRaw] = useState(defaultSections);
+  const [user, setUser] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [authError, setAuthError] = useState("");
+  const [budgetReady, setBudgetReady] = useState(false);
+
+  const resetBudget = () => {
+    setHoursWorkedRaw(0);
+    setHourlyRateRaw(0);
+    setNonTaxableIncomeRaw(0);
+    setTaxYearRaw(defaultTaxYear);
+    setTaxProfileRaw("Standard - tax-free threshold");
+    setLeftoverDestinationRaw("None");
+    setFreeloaderEnabledRaw(true);
+    setSectionsRaw(defaultSections);
+  };
 
   const availableTaxProfiles = useMemo(
     () => Object.keys(taxTables[taxYear] ?? taxTables[defaultTaxYear] ?? {}),
@@ -61,14 +72,14 @@ export function useBudgetModel() {
     : availableTaxProfiles[0] ?? "Standard - tax-free threshold";
 
   // Persist wrappers
-  const persist = (key, setter) => (val) => { setter(val); saveToStorage(key, val); };
-  const setHoursWorked = persist("bp_hoursWorked", setHoursWorkedRaw);
-  const setHourlyRate = persist("bp_hourlyRate", setHourlyRateRaw);
-  const setNonTaxableIncome = persist("bp_nonTaxableIncome", setNonTaxableIncomeRaw);
+  const persist = (setter) => (val) => setter(val);
+  const setHoursWorked = persist(setHoursWorkedRaw);
+  const setHourlyRate = persist(setHourlyRateRaw);
+  const setNonTaxableIncome = persist(setNonTaxableIncomeRaw);
   const setExtraIncome = setNonTaxableIncome;
-  const setTaxProfile = persist("bp_taxProfile", setTaxProfileRaw);
-  const setLeftoverDestination = persist("bp_leftoverDestination", setLeftoverDestinationRaw);
-  const setFreeloaderEnabled = persist("bp_freeloaderEnabled", setFreeloaderEnabledRaw);
+  const setTaxProfile = persist(setTaxProfileRaw);
+  const setLeftoverDestination = persist(setLeftoverDestinationRaw);
+  const setFreeloaderEnabled = persist(setFreeloaderEnabledRaw);
 
   const setTaxYear = (nextYear) => {
     const safeYear = taxTables[nextYear] ? nextYear : defaultTaxYear;
@@ -76,15 +87,89 @@ export function useBudgetModel() {
     const nextProfile = nextProfiles.includes(taxProfile) ? taxProfile : nextProfiles[0] ?? "Standard - tax-free threshold";
     setTaxYearRaw(safeYear);
     setTaxProfileRaw(nextProfile);
-    saveToStorage("bp_taxYear", safeYear);
-    saveToStorage("bp_taxProfile", nextProfile);
   };
 
   const setSections = (next) => {
     const val = typeof next === "function" ? next(sections) : next;
     setSectionsRaw(val);
-    saveToStorage("bp_sections", val);
   };
+
+  const applyBudget = (budget) => {
+    setHoursWorkedRaw(Number(budget.hoursWorked) || 0);
+    setHourlyRateRaw(Number(budget.hourlyRate) || 0);
+    setNonTaxableIncomeRaw(Number(budget.nonTaxableIncome ?? budget.extraIncome) || 0);
+    setTaxYearRaw(taxTables[budget.taxYear] ? budget.taxYear : defaultTaxYear);
+    setTaxProfileRaw(budget.taxProfile || "Standard - tax-free threshold");
+    setLeftoverDestinationRaw(budget.leftoverDestination || "None");
+    setFreeloaderEnabledRaw(Boolean(budget.freeloaderEnabled ?? true));
+    setSectionsRaw(budget.sections || defaultSections);
+  };
+
+  const register = async (username, email, password) => {
+    setAuthError("");
+    const response = await apiRequest("/api/auth/register", {
+      method: "POST",
+      body: JSON.stringify({ username, email, password }),
+    });
+    resetBudget();
+    setUser(response.user);
+    setBudgetReady(true);
+  };
+
+  const login = async (email, password) => {
+    setAuthError("");
+    const response = await apiRequest("/api/auth/login", { method: "POST", body: JSON.stringify({ email, password }) });
+    resetBudget();
+    setUser(response.user);
+    const responseBudget = await apiRequest("/api/budget");
+    if (responseBudget.budget) applyBudget(responseBudget.budget);
+    setBudgetReady(true);
+  };
+
+  const logout = async () => {
+    await apiRequest("/api/auth/logout", { method: "POST" });
+    resetBudget();
+    setUser(null);
+    setBudgetReady(false);
+  };
+
+  const updateAccount = async (details) => {
+    const response = await apiRequest("/api/auth/account", {
+      method: "PATCH",
+      body: JSON.stringify(details),
+    });
+    setUser(response.user);
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+    apiRequest("/api/auth/me")
+      .then(async ({ user: currentUser }) => {
+        if (cancelled) return;
+        setUser(currentUser);
+        if (currentUser) {
+          const { budget } = await apiRequest("/api/budget");
+          if (budget) applyBudget(budget);
+          setBudgetReady(true);
+        }
+        setAuthLoading(false);
+      })
+      .catch((error) => { if (!cancelled) { setAuthError(error.message); setAuthLoading(false); } });
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    if (!user || !budgetReady) return undefined;
+    const timer = setTimeout(() => {
+      apiRequest("/api/budget", { method: "PUT", body: JSON.stringify({ budget: {
+        version: 1, hoursWorked, hourlyRate, nonTaxableIncome, extraIncome: nonTaxableIncome,
+        taxYear, taxProfile: resolvedTaxProfile, leftoverDestination,
+        freeloaderEnabled, sections,
+      } }) })
+        .catch((error) => setAuthError(error.message));
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [user, budgetReady, hoursWorked, hourlyRate, nonTaxableIncome, taxYear, resolvedTaxProfile, leftoverDestination, freeloaderEnabled, sections]);
 
   const exportBudgetData = () => ({
     version: 1,
@@ -138,16 +223,6 @@ export function useBudgetModel() {
     setTaxProfileRaw(nextValues.taxProfile);
     setLeftoverDestinationRaw(nextValues.leftoverDestination);
     setSectionsRaw(nextValues.sections);
-
-    saveToStorage("bp_hoursWorked", nextValues.hoursWorked);
-    saveToStorage("bp_hourlyRate", nextValues.hourlyRate);
-    saveToStorage("bp_nonTaxableIncome", nextValues.nonTaxableIncome);
-    saveToStorage("bp_extraIncome", nextValues.nonTaxableIncome);
-    saveToStorage("bp_freeloaderEnabled", nextValues.freeloaderEnabled);
-    saveToStorage("bp_taxYear", nextValues.taxYear);
-    saveToStorage("bp_taxProfile", nextValues.taxProfile);
-    saveToStorage("bp_leftoverDestination", nextValues.leftoverDestination);
-    saveToStorage("bp_sections", nextValues.sections);
 
     return true;
   };
@@ -223,7 +298,7 @@ export function useBudgetModel() {
 
   const leftoverAccountOptions = useMemo(() => {
     const names = new Set();
-    for (const [key, items] of Object.entries(sections)) {
+    for (const items of Object.values(sections)) {
       for (const item of items) {
         const trimmed = String(item.account || "").trim();
         if (trimmed && trimmed !== "None") names.add(trimmed);
@@ -303,6 +378,7 @@ export function useBudgetModel() {
   }));
 
   return {
+    user, authLoading, authError, setAuthError, register, login, logout, updateAccount,
     hoursWorked, setHoursWorked,
     hourlyRate, setHourlyRate,
     nonTaxableIncome, setNonTaxableIncome,

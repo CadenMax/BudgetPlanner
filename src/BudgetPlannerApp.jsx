@@ -3,11 +3,16 @@ import { useBudgetModel } from "./hooks/useBudgetModel";
 import Dashboard from "./pages/Dashboard";
 import TaxCalculator from "./pages/TaxCalculator";
 import LookupTables from "./pages/LookupTables";
+import Admin from "./pages/Admin";
+import Account from "./pages/Account";
+import AuthScreen from "./pages/AuthScreen";
 import { formatMoney } from "./utils/format";
 import {
   LayoutDashboard,
   Calculator,
-  BookSearch
+  BookSearch,
+  ShieldCheck,
+  UserRound,
 } from "lucide-react";
 
 const tabs = [
@@ -19,6 +24,15 @@ const tabs = [
 export default function BudgetPlannerApp() {
   const model = useBudgetModel();
   const [tab, setTab] = useState("dashboard");
+  const visibleTabs = model.user?.isAdmin
+    ? [...tabs, { key: "account", label: "Account", icon: <UserRound size={18} /> }, { key: "admin", label: "Admin", icon: <ShieldCheck size={18} /> }]
+    : [...tabs, { key: "account", label: "Account", icon: <UserRound size={18} /> }];
+
+  if (model.authLoading) {
+    return <div className="app-bg flex min-h-screen items-center justify-center text-sm text-white/50">Loading your budget...</div>;
+  }
+
+  if (!model.user) return <AuthScreen model={model} />;
 
   return (
     <div className="app-bg min-h-screen">
@@ -28,7 +42,7 @@ export default function BudgetPlannerApp() {
 
           {/* Top row */}
           <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-6 mb-8">
-            <div>
+            <div className="flex flex-wrap items-center gap-3">
               <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight" style={{
                 background: "linear-gradient(135deg, #f0f0f8 0%, #6ee7b7 50%, #818cf8 100%)",
                 WebkitBackgroundClip: "text",
@@ -36,6 +50,17 @@ export default function BudgetPlannerApp() {
               }}>
                 Budget Elite
               </h1>
+              <div className="glass-bright flex items-center gap-2 rounded-lg px-3 py-2 text-xs text-emerald-300/80">
+                <UserRound size={14} />
+                <span className="max-w-[180px] truncate">{model.user.username}</span>
+              </div>
+              <button
+                type="button"
+                onClick={model.logout}
+                className="btn-glow rounded-lg border border-rose-400/20 bg-rose-400/5 px-3 py-2 text-xs font-semibold text-rose-300/80 hover:border-rose-400/40 hover:text-rose-200"
+              >
+                Sign out
+              </button>
             </div>
 
             {/* Live stats pills */}
@@ -56,8 +81,8 @@ export default function BudgetPlannerApp() {
           </div>
 
           {/* Tab bar */}
-          <nav className="flex flex-wrap gap-1.5 pb-1 sm:flex-nowrap sm:overflow-visible">
-            {tabs.map(({ key, label, icon }) => (
+          <nav className="desktop-tabs hidden flex-wrap gap-1.5 pb-1 sm:flex sm:flex-nowrap sm:overflow-visible">
+            {visibleTabs.map(({ key, label, icon }) => (
               <button
                 key={key}
                 onClick={() => setTab(key)}
@@ -73,6 +98,12 @@ export default function BudgetPlannerApp() {
               </button>
             ))}
           </nav>
+          <label className="mobile-nav">
+            <span className="sr-only">Navigate to</span>
+            <select className="input-dark" value={tab} onChange={(event) => setTab(event.target.value)}>
+              {visibleTabs.map(({ key, label }) => <option key={key} value={key}>{label}</option>)}
+            </select>
+          </label>
         </div>
       </header>
 
@@ -81,6 +112,8 @@ export default function BudgetPlannerApp() {
         {tab === "dashboard" && <Dashboard model={model} />}
         {tab === "tax"       && <TaxCalculator model={model} />}
         {tab === "tables"    && <LookupTables model={model} />}
+        {tab === "account"   && <Account model={model} />}
+        {tab === "admin"     && model.user?.isAdmin && <Admin model={model} />}
       </main>
     </div>
   );
