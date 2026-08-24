@@ -39,6 +39,36 @@ Budget data is stored on the server per account. The JSON export/import tools re
 ### Accounts and server storage
 The Docker setup includes a Node API and SQLite database. Create an account in the app, then sign in from any device using the same address. The browser stores only an HTTP-only session cookie; budget values are stored in the database volume.
 
+### User accounts
+Registration requires a unique username, email address, and password of at least eight characters. Usernames may contain letters, numbers, and underscores and preserve their capitalization. Email addresses and usernames are matched case-insensitively for uniqueness.
+
+Users can update their own username, email, and password from the **Account** tab. Signing out clears the in-memory budget state. Budget data is never stored in localStorage or sessionStorage.
+
+### Administrator access
+The default owner administrator is created when the API first initializes:
+
+```text
+Username: admin
+Email: admin@budgetelite.local
+Password: ChangeMe123!
+```
+
+Sign in at `http://localhost:3684`, then select the **Admin** tab. Change the default password immediately. Override the bootstrap credentials before deployment with Docker environment variables:
+
+```yaml
+services:
+  api:
+    environment:
+      ADMIN_USERNAME: your-admin-name
+      ADMIN_EMAIL: you@example.com
+      ADMIN_PASSWORD: use-a-long-unique-password
+```
+
+Administrators can search and filter accounts, edit usernames and emails, reset passwords, lock accounts, export budgets, view login activity, and inspect the audit log. Regular administrators cannot manage other administrators. The owner administrator can promote or demote owner administrators. The API prevents deleting or disabling the last active administrator and prevents removing the last owner administrator.
+
+### Mobile layout
+On screens up to 640px wide, the desktop tab bar becomes a navigation dropdown. Budget breakdown rows and administrator account rows stack into mobile-friendly layouts. Very narrow screens also collapse account summary and lookup-table content to avoid horizontal scrolling.
+
 ## How to use if you get a fixed income
 Some workers out there don't have casual jobs and actually receive a fixed income per year (I know, shocking right?) This tool can still be used by these lucky few, by changing what they spend, rather then what they receive. It is a handy tool to come back to each pay day to divy out your income properly, and then re-assess whenever you feel like you are putting money into the wrong places
 
@@ -184,7 +214,7 @@ docker compose up --build -d
 - Do not delete that volume unless you have a separate database backup.
 - If you want it to be available on the internet, you need to open that port in your firewall or router.
 - If you want HTTPS (secure website access), you should place it behind a reverse proxy such as Nginx Proxy Manager or Caddy.
-- The first account created on a browser can import that browser's existing budget automatically. After migration, budget changes are stored on the server.
+- Budget data is stored per account in SQLite. Existing browser localStorage data is not imported.
 - Use HTTPS through a reverse proxy before exposing accounts to the internet.
 
 ### Common beginner troubleshooting
