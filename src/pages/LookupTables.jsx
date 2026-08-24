@@ -46,8 +46,8 @@ export default function LookupTables({ model }) {
               color: "#818cf8"
             }}>Active</span>
           </div>
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
+          <div className="lookup-table-wrapper overflow-x-auto">
+            <table className="lookup-table min-w-full text-sm">
               <thead>
                 <tr className="border-b border-white/5">
                   {["Threshold", "Rate", "Base"].map((h) => (
@@ -77,8 +77,8 @@ export default function LookupTables({ model }) {
             <h3 className="font-bold text-orange-400 text-sm">WHM Reference Table</h3>
             <p className="text-xs text-white-600 mt-0.5">Working Holiday Maker annual brackets</p>
           </div>
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
+          <div className="lookup-table-wrapper overflow-x-auto">
+            <table className="lookup-table min-w-full text-sm">
               <thead>
                 <tr className="border-b border-white/5">
                   {["From", "To", "Rate"].map((h) => (

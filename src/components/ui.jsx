@@ -232,7 +232,7 @@ export function AccountSummary({ accountTotals, leftoverDestination = "Investmen
   };
 
   return (
-    <div className="glass rounded-2xl overflow-hidden">
+    <div className="account-summary glass rounded-2xl overflow-hidden">
       {/* Header */}
       <div className="px-6 py-4 border-b border-white/5">
         <h3 className="text-base font-bold text-white/80">Account Totals</h3>
@@ -265,7 +265,7 @@ export function AccountSummary({ accountTotals, leftoverDestination = "Investmen
           const pct = grandTotal > 0 ? (total / grandTotal) * 100 : 0;
           const color = colorFor(account, index);
           return (
-            <div key={account} className="flex items-center justify-between py-3 gap-4">
+            <div key={account} className="account-summary-row flex items-center justify-between py-3 gap-4">
               <div className="flex items-center gap-3 min-w-0">
                 <span
                   className="w-2.5 h-2.5 rounded-full flex-shrink-0"
@@ -273,8 +273,8 @@ export function AccountSummary({ accountTotals, leftoverDestination = "Investmen
                 />
                 <span className="text-sm font-medium text-white/70 truncate">{account}</span>
               </div>
-              <div className="flex items-center gap-4 flex-shrink-0">
-                <div className="w-28 bg-white/5 rounded-full h-1 overflow-hidden">
+              <div className="account-summary-values flex items-center gap-4 flex-shrink-0">
+                <div className="account-summary-progress w-28 bg-white/5 rounded-full h-1 overflow-hidden">
                   <div
                     className="h-1 rounded-full transition-all duration-700"
                     style={{ width: `${pct}%`, background: color }}
@@ -350,8 +350,8 @@ export function SectionTable({ section, onUpdateItem, onRemoveItem, onAddItem, f
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto">
-        <table className="min-w-full text-sm">
+      <div className="budget-table-wrapper overflow-x-auto">
+        <table className="budget-table min-w-full text-sm">
           <thead>
             <tr className="border-b border-white/5">
               {headers.map((h) => (
@@ -361,10 +361,10 @@ export function SectionTable({ section, onUpdateItem, onRemoveItem, onAddItem, f
           </thead>
           <tbody>
             {section.items.map((item) => (
-              <tr key={item.id} className="border-b border-white/[0.03] hover:bg-white/[0.02] transition-colors group">
+              <tr key={item.id} className="budget-row border-b border-white/[0.03] hover:bg-white/[0.02] transition-colors group">
 
                 {/* Label */}
-                <td className="px-5 py-3 font-medium text-white/80 min-w-[140px]">
+                <td data-label="Item" className="budget-cell px-5 py-3 font-medium text-white/80 min-w-[140px]">
                   <input
                     className="bg-transparent border-b border-transparent hover:border-white/20 focus:border-white/40 outline-none w-full text-white/80 transition-colors"
                     value={item.label}
@@ -373,7 +373,7 @@ export function SectionTable({ section, onUpdateItem, onRemoveItem, onAddItem, f
                 </td>
 
                 {/* Mode toggle */}
-                <td className="px-5 py-3">
+                <td data-label="Type" className="budget-cell px-5 py-3">
                   <div className="flex rounded-lg overflow-hidden border border-white/10 w-fit">
                     {["fixed", "pctOfCategory"].map((m) => (
                       <button
@@ -396,7 +396,7 @@ export function SectionTable({ section, onUpdateItem, onRemoveItem, onAddItem, f
                 </td>
 
                 {/* Value input */}
-                <td className="px-5 py-3">
+                <td data-label="Value" className="budget-cell px-5 py-3">
                   <NumericInput
                     value={item.value}
                     onChange={(val) => onUpdateItem(section.sectionKey, item.id, { value: val })}
@@ -406,10 +406,10 @@ export function SectionTable({ section, onUpdateItem, onRemoveItem, onAddItem, f
                 </td>
 
                 {/* Calculated */}
-                <td className={`px-5 py-3 mono font-bold ${c.glow}`}>{formatMoney(item.computed)}</td>
+                <td data-label="Calculated" className={`budget-cell px-5 py-3 mono font-bold ${c.glow}`}>{formatMoney(item.computed)}</td>
 
                 {/* Account */}
-                <td className="px-5 py-3">
+                <td data-label="Account" className="budget-cell px-5 py-3">
                   <input
                     className="bg-transparent border-b border-transparent hover:border-white/20 focus:border-white/40 outline-none text-xs w-24 transition-colors"
                     value={item.account}
@@ -418,7 +418,7 @@ export function SectionTable({ section, onUpdateItem, onRemoveItem, onAddItem, f
                 </td>
 
                 {freeloaderEnabled && (
-                  <td className="px-5 py-3">
+                  <td data-label="Freeloader" className="budget-cell px-5 py-3">
                     <div className="flex items-center gap-2">
                       <Checkbox
                         checked={!!item.isFreeloader}
@@ -429,7 +429,7 @@ export function SectionTable({ section, onUpdateItem, onRemoveItem, onAddItem, f
                   </td>
                 )}
 
-                <td className="px-5 py-3 font-medium text-white-80 min-w-[140px]">
+                <td data-label="Notes" className="budget-cell px-5 py-3 font-medium text-white-80 min-w-[140px]">
                   {item.note !== undefined && (
                     <input
                       className="mt-1 text-xs bg-transparent border-b border-transparent hover:border-white/20 focus:border-white/40 outline-none w-full transition-colors"
@@ -443,7 +443,7 @@ export function SectionTable({ section, onUpdateItem, onRemoveItem, onAddItem, f
                 </td>
 
                 {/* Remove */}
-                <td className="px-5 py-3">
+                <td className="budget-remove-cell px-5 py-3">
                   <button
                     onClick={() => onRemoveItem(section.sectionKey, item.id)}
                     className="opacity-0 group-hover:opacity-100 transition-opacity text-white/20 hover:text-rose-400 text-lg leading-none"
