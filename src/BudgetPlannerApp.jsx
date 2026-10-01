@@ -5,12 +5,13 @@ import TaxCalculator from "./pages/TaxCalculator";
 import LookupTables from "./pages/LookupTables";
 import Admin from "./pages/Admin";
 import Account from "./pages/Account";
+import History from "./pages/History";
 import AuthScreen from "./pages/AuthScreen";
-import { formatMoney } from "./utils/format";
 import {
   LayoutDashboard,
   Calculator,
   BookSearch,
+  History as HistoryIcon,
   ShieldCheck,
   UserRound,
 } from "lucide-react";
@@ -19,6 +20,7 @@ const tabs = [
   { key: "dashboard", label: "Dashboard",       icon: <LayoutDashboard size={18} /> },
   { key: "tax",       label: "Tax Calculator",  icon: <Calculator size={18} /> },
   { key: "tables",    label: "Lookup Tables",   icon: <BookSearch size={18} /> },
+  { key: "history",   label: "Budget History",  icon: <HistoryIcon size={18} /> },
 ];
 
 export default function BudgetPlannerApp() {
@@ -109,9 +111,10 @@ export default function BudgetPlannerApp() {
 
       {/* Content */}
       <main className="mx-auto max-w-7xl px-4 md:px-8 py-8">
-        {tab === "dashboard" && <Dashboard model={model} />}
+        {tab === "dashboard" && <Dashboard model={model} onOpenHistory={() => setTab("history")} />}
         {tab === "tax"       && <TaxCalculator model={model} />}
         {tab === "tables"    && <LookupTables model={model} />}
+        {tab === "history"   && <History model={model} onOpenDashboard={() => setTab("dashboard")} />}
         {tab === "account"   && <Account model={model} />}
         {tab === "admin"     && model.user?.isAdmin && <Admin model={model} />}
       </main>

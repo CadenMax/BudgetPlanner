@@ -309,8 +309,14 @@ export function AccountSummary({ accountTotals, leftoverDestination = "Investmen
 // ── Section Table ────────────────────────────────────────────────────────────
 export function SectionTable({ section, onUpdateItem, onRemoveItem, onAddItem, freeloaderEnabled = true }) {
   const c = colorConfig[section.color] || colorConfig.green;
-  const pct = section.total > 0 ? Math.min(100, (section.spent / section.total) * 100) : 0;
-  const over = section.spent > section.total;
+  // Compare whole cents so mixed fixed and percentage allocations do not create false overages.
+  const totalCents = Math.round((Number(section.total) || 0) * 100);
+  const spentCents = Math.round((Number(section.spent) || 0) * 100);
+  const remainingCents = totalCents - spentCents;
+  const usedPct = totalCents > 0 ? (spentCents / totalCents) * 100 : 0;
+  const remainingPct = totalCents > 0 ? (remainingCents / totalCents) * 100 : 0;
+  const progressPct = Math.max(0, Math.min(100, usedPct));
+  const over = remainingCents < 0;
   const accentColor = section.color === "green" ? "#6ee7b7" : section.color === "indigo" ? "#818cf8" : "#fb923c";
   const [showAddForm, setShowAddForm] = React.useState(false);
   const headers = freeloaderEnabled
@@ -335,10 +341,11 @@ export function SectionTable({ section, onUpdateItem, onRemoveItem, onAddItem, f
         <div className="flex items-center gap-3">
           <div className="text-left">
             <div className="text-xs text-white/40 uppercase tracking-widest">Used</div>
-            <div className={`mono text-sm font-bold ${over ? "text-rose-400" : c.glow}`}>{pct.toFixed(0)}%</div>
+            <div className={`mono text-sm font-bold ${over ? "text-rose-400" : c.glow}`}>{usedPct.toFixed(2)}% used</div>
+            <div className={`mono text-[10px] ${remainingCents < 0 ? "text-rose-300/70" : "text-white/40"}`}>{remainingPct.toFixed(2)}% left</div>
           </div>
           <span className={`text-xs font-semibold px-3 py-1 rounded-full ${over ? "bg-rose-400/10 text-rose-400 border border-rose-400/20" : c.badge}`}>
-            {over ? "⚠ Over" : "On track"}
+            {over ? "⚠ Over" : remainingCents === 0 ? "Exactly allocated" : "On track"}
           </span>
         </div>
       </div>
@@ -346,7 +353,7 @@ export function SectionTable({ section, onUpdateItem, onRemoveItem, onAddItem, f
       {/* Progress bar */}
       <div className="h-0.5 bg-white/5">
         <div className="h-0.5 transition-all duration-700"
-          style={{ width: `${pct}%`, background: over ? "#f87171" : `linear-gradient(90deg, ${accentColor}, transparent)` }} />
+          style={{ width: `${progressPct}%`, background: over ? "#f87171" : `linear-gradient(90deg, ${accentColor}, transparent)` }} />
       </div>
 
       {/* Table */}

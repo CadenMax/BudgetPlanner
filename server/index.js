@@ -326,6 +326,34 @@ app.put("/api/budget", requireUser, (req, res) => {
   res.status(204).end();
 });
 
+app.post("/api/budget/captures", requireUser, (req, res) => {
+  const capture = req.body?.capture;
+  if (!capture || typeof capture !== "object") return res.status(400).json({ error: "Invalid capture data" });
+
+  const row = db.prepare("SELECT budget_json FROM users WHERE id = ?").get(req.user.id);
+  const budget = row?.budget_json ? JSON.parse(row.budget_json) : null;
+  if (!validBudget(budget)) return res.status(400).json({ error: "Create a budget before capturing it" });
+
+  const captures = Array.isArray(budget.captures) ? budget.captures : [];
+  const nextBudget = { ...budget, captures: [...captures, capture].slice(-200) };
+  db.prepare("UPDATE users SET budget_json = ? WHERE id = ?").run(JSON.stringify(nextBudget), req.user.id);
+  res.status(201).json({ captures: nextBudget.captures });
+});
+
+app.delete("/api/budget/captures/:id", requireUser, (req, res) => {
+  const row = db.prepare("SELECT budget_json FROM users WHERE id = ?").get(req.user.id);
+  const budget = row?.budget_json ? JSON.parse(row.budget_json) : null;
+  if (!validBudget(budget)) return res.status(400).json({ error: "No budget data found" });
+
+  const captures = Array.isArray(budget.captures) ? budget.captures : [];
+  const nextCaptures = captures.filter((capture) => capture.id !== req.params.id);
+  if (nextCaptures.length === captures.length) return res.status(404).json({ error: "Capture not found" });
+
+  const nextBudget = { ...budget, captures: nextCaptures };
+  db.prepare("UPDATE users SET budget_json = ? WHERE id = ?").run(JSON.stringify(nextBudget), req.user.id);
+  res.json({ captures: nextCaptures });
+});
+
 app.use((error, _req, res, next) => {
   void next;
   console.error(error);

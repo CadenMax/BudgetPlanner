@@ -21,8 +21,12 @@ FROM nginx:alpine
 COPY --from=builder /app/dist /usr/share/nginx/html
 
 # Custom nginx config for React Router (handles client-side routing)
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY nginx.conf /etc/nginx/budgetelite.conf.template
+
+# Compose uses port 80/api; Railway supplies PORT and API_HOST at runtime.
+ENV PORT=80
+ENV API_HOST=api
 
 EXPOSE 80
 
-CMD ["nginx", "-g", "daemon off;"]
+CMD ["sh", "-c", "envsubst '$PORT $API_HOST' < /etc/nginx/budgetelite.conf.template > /etc/nginx/conf.d/default.conf && exec nginx -g 'daemon off;'"]

@@ -1,9 +1,25 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { MetricCard, Field, SectionTable, AccountSummary } from "../components/ui";
+import { Camera } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 
 
-export default function Dashboard({ model }) {
+export default function Dashboard({ model, onOpenHistory }) {
   const fileInputRef = useRef(null);
+  const [captureState, setCaptureState] = useState("idle");
+
+  const handleCapture = async () => {
+    if (model.isReviewing) return;
+    setCaptureState("saving");
+    try {
+      await model.captureBudget();
+      setCaptureState("saved");
+      window.setTimeout(() => setCaptureState("idle"), 1800);
+    } catch (error) {
+      model.setAuthError(error.message);
+      setCaptureState("idle");
+    }
+  };
 
   const handleExport = () => {
     const payload = model.exportBudgetData();
@@ -36,6 +52,17 @@ export default function Dashboard({ model }) {
 
   return (
     <div className="grid gap-8">
+      {model.isReviewing && (
+        <div className="glass flex flex-wrap items-center justify-between gap-3 rounded-2xl border-indigo-400/30 bg-indigo-500/10 px-5 py-4">
+          <div>
+            <div className="text-sm font-semibold text-indigo-200">Reviewing a saved capture</div>
+            <div className="text-xs text-indigo-200/60">Your current Dashboard has been kept intact and will return when you leave review mode. Changes made during review will not be saved.</div>
+          </div>
+          <button type="button" onClick={() => { model.exitReview(); onOpenHistory(); }} className="btn-glow flex items-center gap-2 rounded-lg border border-indigo-300/30 bg-indigo-400/10 px-3 py-2 text-xs font-semibold text-indigo-200">
+            <ArrowLeft size={14} /> Back to history
+          </button>
+        </div>
+      )}
 
       {/* Inputs + income summary — side by side */}
       <div className="grid gap-6 lg:grid-cols-[1fr_1.4fr]">
@@ -45,6 +72,15 @@ export default function Dashboard({ model }) {
           <Field label="Hours worked / week" value={model.hoursWorked} onChange={model.setHoursWorked} step="0.5" />
           <Field label="Hourly rate" value={model.hourlyRate} onChange={model.setHourlyRate} />
           <Field label="Non-taxable income" value={model.nonTaxableIncome} onChange={model.setNonTaxableIncome} />
+          <button
+            type="button"
+            onClick={handleCapture}
+            disabled={captureState === "saving" || model.isReviewing}
+            className="btn-glow flex items-center justify-center gap-2 rounded-lg border border-emerald-400/30 bg-emerald-500/10 px-3 py-3 text-sm font-semibold text-emerald-300 disabled:opacity-50"
+          >
+            <Camera size={16} />
+            {model.isReviewing ? "Unavailable during review" : captureState === "saving" ? "Saving capture..." : captureState === "saved" ? "Captured" : "Capture this period"}
+          </button>
 
           <label className="flex flex-col gap-2">
             <span className="text-xs font-semibold uppercase tracking-widest text-white/50">Leftover destination</span>
@@ -193,6 +229,15 @@ export default function Dashboard({ model }) {
             freeloaderEnabled={model.freeloaderEnabled}
           />
         ))}
+        <button
+          type="button"
+          onClick={handleCapture}
+          disabled={captureState === "saving" || model.isReviewing}
+          className="btn-glow flex items-center justify-center gap-2 rounded-xl border border-indigo-400/30 bg-indigo-500/10 px-4 py-3 text-sm font-semibold text-indigo-300 disabled:opacity-50"
+        >
+          <Camera size={16} />
+          {model.isReviewing ? "Unavailable during review" : "Capture breakdown snapshot"}
+        </button>
       </div>
 
       {/* Account summary */}

@@ -22,7 +22,7 @@ Set up your own Wants, Needs, and Savings/Investments line by line. Each item ca
 - Percentage of your income (after tax)
 
 ### Flexible Pay Periods
-Seemlessly works whether you get paid weekly, fortnightly, or monthly schedules. Just enter your hours worked, hourly rate and divy up your acounts to reflect when money comes out.
+Enter the income and hours that match the pay period you are budgeting. The app records the exact values you enter for each capture; there is no separate pay-period setting to maintain.
 
 ### Freeloader Money
 Budget for money you receive but do not actually spend (for example, parental help with rent, gifts, or reimbursements). See what your lifestyle would cost without that help while keeping your personal spending accurate. This feature is toggleable making it easily hidden if you do not wish to use.
@@ -35,6 +35,9 @@ Somestimes you may receive some money that isn't taxed, or already has taxed app
 
 ### Backup & Restore
 Budget data is stored on the server per account. The JSON export/import tools remain available as an additional backup option.
+
+### Budget history
+Use **Capture this period** on the Dashboard whenever you want to record a pay period. Captures store the entered income, PAYG, allocation, and remaining amounts without changing the live budget. The **Budget History** tab filters captures by exact date range, net-pay range, allocation result, and chart metric, then shows average summaries, allocation splits, and income trends. Each capture can be downloaded as a CSV file, which opens directly in Excel and is widely supported by financial tools.
 
 ### Accounts and server storage
 The Docker setup includes a Node API and SQLite database. Create an account in the app, then sign in from any device using the same address. The browser stores only an HTTP-only session cookie; budget values are stored in the database volume.
@@ -103,6 +106,21 @@ Before you start, install these on your machine:
 - A terminal / command prompt 
 
 You do not need to install Node.js manually for this setup, because Docker handles that for you.
+
+### Railway and Cloudflare deployment
+
+Railway should run this project as two services:
+
+1. Create an API service using `Dockerfile.server`.
+2. Create a frontend service using `Dockerfile`.
+3. Add a Railway volume mounted at `/app/data` to the API service so the SQLite database survives deployments.
+4. Set the frontend service variable `API_HOST` to the API service's private Railway hostname, normally in the form `api.railway.internal`.
+5. Set the API service health check path to `/api/health`. Railway supplies `PORT` automatically; the API already reads that variable.
+6. Set `ADMIN_USERNAME`, `ADMIN_EMAIL`, and `ADMIN_PASSWORD` on the API service before the first deploy.
+
+Give the frontend service a Railway public domain first and confirm login, budget saving, captures, and history work. Then add your Cloudflare DNS record as a CNAME to that Railway domain and set Cloudflare SSL/TLS mode to **Full** or **Full (strict)**. Keep the API service private; the frontend proxies `/api` to it.
+
+Do not use Cloudflare Pages for this application because the Node API and persistent SQLite storage need a running Railway service.
 
 ### 1. Download the project
 

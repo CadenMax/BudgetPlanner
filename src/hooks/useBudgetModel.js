@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { taxTables, defaultTaxYear } from "../data/taxTables";
 import { budgetDefs } from "../data/budgetDefs";
 import { sum } from "../utils/format";
@@ -50,6 +50,9 @@ export function useBudgetModel() {
   const [authLoading, setAuthLoading] = useState(true);
   const [authError, setAuthError] = useState("");
   const [budgetReady, setBudgetReady] = useState(false);
+  const [captures, setCaptures] = useState([]);
+  const [isReviewing, setIsReviewing] = useState(false);
+  const reviewBackupRef = useRef(null);
 
   const resetBudget = () => {
     setHoursWorkedRaw(0);
@@ -60,6 +63,8 @@ export function useBudgetModel() {
     setLeftoverDestinationRaw("None");
     setFreeloaderEnabledRaw(true);
     setSectionsRaw(defaultSections);
+    setIsReviewing(false);
+    reviewBackupRef.current = null;
   };
 
   const availableTaxProfiles = useMemo(
@@ -103,6 +108,7 @@ export function useBudgetModel() {
     setLeftoverDestinationRaw(budget.leftoverDestination || "None");
     setFreeloaderEnabledRaw(Boolean(budget.freeloaderEnabled ?? true));
     setSectionsRaw(budget.sections || defaultSections);
+    setCaptures(Array.isArray(budget.captures) ? budget.captures : []);
   };
 
   const register = async (username, email, password) => {
@@ -159,17 +165,17 @@ export function useBudgetModel() {
   }, []);
 
   useEffect(() => {
-    if (!user || !budgetReady) return undefined;
+    if (!user || !budgetReady || isReviewing) return undefined;
     const timer = setTimeout(() => {
       apiRequest("/api/budget", { method: "PUT", body: JSON.stringify({ budget: {
         version: 1, hoursWorked, hourlyRate, nonTaxableIncome, extraIncome: nonTaxableIncome,
         taxYear, taxProfile: resolvedTaxProfile, leftoverDestination,
-        freeloaderEnabled, sections,
+        freeloaderEnabled, sections, captures,
       } }) })
         .catch((error) => setAuthError(error.message));
     }, 300);
     return () => clearTimeout(timer);
-  }, [user, budgetReady, hoursWorked, hourlyRate, nonTaxableIncome, taxYear, resolvedTaxProfile, leftoverDestination, freeloaderEnabled, sections]);
+  }, [user, budgetReady, isReviewing, hoursWorked, hourlyRate, nonTaxableIncome, taxYear, resolvedTaxProfile, leftoverDestination, freeloaderEnabled, sections, captures]);
 
   const exportBudgetData = () => ({
     version: 1,
@@ -183,7 +189,67 @@ export function useBudgetModel() {
     leftoverDestination: normalizedLeftoverDestination,
     freeloaderEnabled,
     sections,
+    captures,
   });
+
+  const captureBudget = async () => {
+    const capture = {
+      id: crypto.randomUUID(),
+      capturedAt: new Date().toISOString(),
+      hoursWorked,
+      hourlyRate,
+      grossIncome,
+      payg,
+      netPay,
+      needsBudget,
+      wantsBudget,
+      savingsBudget,
+      needsRemaining,
+      wantsRemaining,
+      savingsRemaining,
+      totalAllocated: needsTotal + wantsTotal + savingsTotal,
+      sections: budgetSections.map(({ sectionKey, title, total, spent, remaining }) => ({ sectionKey, title, total, spent, remaining })),
+      budget: exportBudgetData(),
+    };
+    const response = await apiRequest("/api/budget/captures", {
+      method: "POST",
+      body: JSON.stringify({ capture }),
+    });
+    setCaptures(response.captures || []);
+    return capture;
+  };
+
+  const restoreCapture = (capture) => {
+    if (!capture?.budget || typeof capture.budget !== "object") return false;
+    if (!isReviewing) {
+      reviewBackupRef.current = {
+        hoursWorked,
+        hourlyRate,
+        nonTaxableIncome,
+        taxYear,
+        taxProfile,
+        leftoverDestination,
+        freeloaderEnabled,
+        sections,
+      };
+    }
+    applyBudget({ ...capture.budget, captures });
+    setIsReviewing(true);
+    return true;
+  };
+
+  const exitReview = () => {
+    const backup = reviewBackupRef.current;
+    if (!backup) return;
+    applyBudget({ ...backup, captures });
+    reviewBackupRef.current = null;
+    setIsReviewing(false);
+  };
+
+  const deleteCapture = async (captureId) => {
+    const response = await apiRequest(`/api/budget/captures/${encodeURIComponent(captureId)}`, { method: "DELETE" });
+    setCaptures(response.captures || []);
+  };
 
   const importBudgetData = (payload) => {
     if (!payload || typeof payload !== "object") return false;
@@ -223,6 +289,7 @@ export function useBudgetModel() {
     setTaxProfileRaw(nextValues.taxProfile);
     setLeftoverDestinationRaw(nextValues.leftoverDestination);
     setSectionsRaw(nextValues.sections);
+    setCaptures(Array.isArray(payload.captures) ? payload.captures : []);
 
     return true;
   };
@@ -395,6 +462,12 @@ export function useBudgetModel() {
     setFreeloaderEnabled,
     exportBudgetData,
     importBudgetData,
+    captures,
+    captureBudget,
+    restoreCapture,
+    deleteCapture,
+    isReviewing,
+    exitReview,
     taxableIncome, grossIncome, payg, netPay,
     budgetSections,
     needsBudget, wantsBudget, savingsBudget,
