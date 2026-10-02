@@ -131,8 +131,9 @@ Railway should run this project as two services:
 5. In the frontend service's Public Networking settings, set the target port to match the frontend's `PORT` environment variable. Nginx listens on this port; a mismatch can make the Railway domain return a gateway error even when the container starts.
 6. Set the frontend service's `API_PORT` to the port the API listens on. The API reads Railway's `PORT`; for example, if the API logs that it listens on `8080`, set frontend `API_PORT` to `8080` as well. This is separate from the frontend's Public Networking target port. The local Docker setup defaults to `3001`.
 7. Set the API service health check path to `/api/health`. Railway supplies `PORT` automatically; the API already reads that variable.
-8. Set `ADMIN_USERNAME`, `ADMIN_EMAIL`, and `ADMIN_PASSWORD` on the API service before the first deploy.
-9. The frontend container waits for the API's `/api/health` endpoint before starting Nginx, so both services can deploy from the same GitHub push. If the API does not become healthy within about four minutes, the frontend container exits and logs the API address it could not reach.
+8. Set the frontend service health check path to `/api/health` too. This checks that the frontend can proxy requests to the API, not just serve static files.
+9. Set `ADMIN_USERNAME`, `ADMIN_EMAIL`, and `ADMIN_PASSWORD` on the API service before the first deploy.
+10. The frontend container waits for the API's `/api/health` endpoint before starting Nginx, so both services can deploy from the same GitHub push. If the API does not become healthy within about four minutes, the frontend container exits and logs the API address it could not reach. Look for `Waiting for API health check` in frontend startup logs to confirm the wait script is running.
 
 If the frontend logs `host not found in upstream`, verify `API_HOST` resolves to the API service's `RAILWAY_PRIVATE_DOMAIN` and that both services are deployed in the same Railway project environment. Nginx cannot start while its configured upstream hostname is unresolvable. If Nginx starts but API requests fail, verify `API_PORT` matches the API's listening `PORT`.
 
