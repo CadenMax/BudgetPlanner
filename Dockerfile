@@ -30,4 +30,4 @@ ENV API_PORT=3001
 
 EXPOSE 80
 
-CMD ["sh", "-c", "DNS_RESOLVER=$(awk '$1 == \"nameserver\" { print $2; exit }' /etc/resolv.conf); case \"$DNS_RESOLVER\" in *:*) DNS_RESOLVER=\"[$DNS_RESOLVER]\" ;; esac; if [ -z \"$DNS_RESOLVER\" ]; then echo 'No DNS resolver found in /etc/resolv.conf' >&2; exit 1; fi; envsubst '$PORT $API_HOST $API_PORT $DNS_RESOLVER' < /etc/nginx/budgetelite.conf.template > /etc/nginx/conf.d/default.conf && exec nginx -g 'daemon off;'"]
+CMD ["sh", "-c", "envsubst '$PORT $API_HOST $API_PORT' < /etc/nginx/budgetelite.conf.template > /etc/nginx/conf.d/default.conf && exec nginx -g 'daemon off;'"]
