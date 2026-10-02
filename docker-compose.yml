@@ -6,6 +6,7 @@ services:
     environment:
       PORT: 80
       API_HOST: api
+      API_PORT: 3001
     ports:
       - "3684:80"   # Change 3684 to whatever port you want on your server
     depends_on:

@@ -112,11 +112,14 @@ You do not need to install Node.js manually for this setup, because Docker handl
 Railway should run this project as two services:
 
 1. Create an API service using `Dockerfile.server`.
-2. Create a frontend service using `Dockerfile`.
+2. Create a frontend service using `Dockerfile`. Keep both services in the same Railway project and environment so Railway private networking can resolve the API from the frontend.
 3. Add a Railway volume mounted at `/app/data` to the API service so the SQLite database survives deployments.
-4. Set the frontend service variable `API_HOST` to the API service's private Railway hostname, normally in the form `api.railway.internal`.
-5. Set the API service health check path to `/api/health`. Railway supplies `PORT` automatically; the API already reads that variable.
-6. Set `ADMIN_USERNAME`, `ADMIN_EMAIL`, and `ADMIN_PASSWORD` on the API service before the first deploy.
+4. In the frontend service variables, set `API_HOST` to a reference to the API service's `RAILWAY_PRIVATE_DOMAIN`, for example `${{api.RAILWAY_PRIVATE_DOMAIN}}` when the API service is named `api`. Use the exact Railway service name in the reference; do not guess or type a hostname from a different project or environment. Railway supplies the private domain, normally ending in `.railway.internal`.
+5. Set the frontend service's `API_PORT` to the port the API listens on. The API reads Railway's `PORT`; for example, if the API logs that it listens on `8080`, set frontend `API_PORT` to `8080` as well. The local Docker setup defaults to `3001`.
+6. Set the API service health check path to `/api/health`. Railway supplies `PORT` automatically; the API already reads that variable.
+7. Set `ADMIN_USERNAME`, `ADMIN_EMAIL`, and `ADMIN_PASSWORD` on the API service before the first deploy.
+
+If the frontend logs `host not found in upstream`, verify `API_HOST` resolves to the API service's `RAILWAY_PRIVATE_DOMAIN` and that both services are deployed in the same Railway project environment. Nginx cannot start while its configured upstream hostname is unresolvable. If Nginx starts but API requests fail, verify `API_PORT` matches the API's listening `PORT`.
 
 Give the frontend service a Railway public domain first and confirm login, budget saving, captures, and history work. Then add your Cloudflare DNS record as a CNAME to that Railway domain and set Cloudflare SSL/TLS mode to **Full** or **Full (strict)**. Keep the API service private; the frontend proxies `/api` to it.
 
