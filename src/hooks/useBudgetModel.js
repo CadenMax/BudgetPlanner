@@ -27,11 +27,20 @@ const defaultSections = {
 };
 
 async function apiRequest(path, options = {}) {
-  const response = await fetch(path, {
-    ...options,
-    credentials: "same-origin",
-    headers: { "Content-Type": "application/json", ...(options.headers || {}) },
-  });
+  let response;
+  try {
+    response = await fetch(path, {
+      ...options,
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json", ...(options.headers || {}) },
+      signal: options.signal ?? AbortSignal.timeout(8000),
+    });
+  } catch (error) {
+    if (error.name === "TimeoutError" || error.name === "AbortError") {
+      throw new Error("The server took too long to respond. Please try again.");
+    }
+    throw error;
+  }
   const body = response.status === 204 ? null : await response.json().catch(() => null);
   if (!response.ok) throw new Error(body?.error || "Request failed");
   return body;
@@ -138,10 +147,15 @@ export function useBudgetModel() {
   };
 
   const logout = async () => {
-    await apiRequest("/api/auth/logout", { method: "POST" });
     resetBudget();
     setUser(null);
     setBudgetReady(false);
+    setAuthError("");
+    try {
+      await apiRequest("/api/auth/logout", { method: "POST" });
+    } catch {
+      setAuthError("Signed out on this page, but the server could not clear the session. Try again after the connection recovers.");
+    }
   };
 
   const updateAccount = async (details) => {
@@ -182,7 +196,7 @@ export function useBudgetModel() {
       const query = params.toString();
       window.history.replaceState({}, "", `${window.location.pathname}${query ? `?${query}` : ""}${window.location.hash}`);
     }
-    apiRequest("/api/auth/me")
+    apiRequest("/api/auth/me", { signal: AbortSignal.timeout(5000) })
       .then(async ({ user: currentUser }) => {
         if (cancelled) return;
         setUser(currentUser);
