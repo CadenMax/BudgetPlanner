@@ -13,7 +13,7 @@ export default function TaxCalculator({ model }) {
       <div className="flex flex-col gap-5">
         <div className="glass rounded-2xl p-6 flex flex-col gap-5 fade-up">
           <h2 className="text-xs font-semibold uppercase tracking-widest ">Your Details</h2>
-          <Field label="Weekly hours" value={model.hoursWorked} onChange={model.setHoursWorked} step="0.5" />
+          <Field label="Hours worked / period" value={model.hoursWorked} onChange={model.setHoursWorked} step="0.5" />
           <Field label="Hourly rate"  value={model.hourlyRate}  onChange={model.setHourlyRate} />
           <Field label="Non-taxable income" value={model.nonTaxableIncome} onChange={model.setNonTaxableIncome} />
           <Select
@@ -37,7 +37,7 @@ export default function TaxCalculator({ model }) {
           boxShadow: "0 0 40px rgba(110,231,183,0.05)"
         }}>
           <div className="px-6 pt-6 pb-4 border-b border-white/5">
-            <div className="text-xs uppercase tracking-widest text-white-500 mb-1">Weekly Gross</div>
+            <div className="text-xs uppercase tracking-widest text-white-500 mb-1">Gross</div>
             <div className="mono text-4xl font-bold text-white-">{formatMoney(model.grossIncome)}</div>
           </div>
           <div className="grid grid-cols-2 divide-x divide-white/5">

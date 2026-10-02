@@ -69,7 +69,7 @@ export default function Dashboard({ model, onOpenHistory }) {
         {/* Inputs */}
         <div className="glass rounded-2xl p-6 flex flex-col gap-5 fade-up">
           <h2 className="text-xs font-semibold uppercase tracking-widest text-white/50">Income Inputs</h2>
-          <Field label="Hours worked / week" value={model.hoursWorked} onChange={model.setHoursWorked} step="0.5" />
+          <Field label="Hours worked / period" value={model.hoursWorked} onChange={model.setHoursWorked} step="0.5" />
           <Field label="Hourly rate" value={model.hourlyRate} onChange={model.setHourlyRate} />
           <Field label="Non-taxable income" value={model.nonTaxableIncome} onChange={model.setNonTaxableIncome} />
           <button
@@ -236,7 +236,7 @@ export default function Dashboard({ model, onOpenHistory }) {
           className="btn-glow flex items-center justify-center gap-2 rounded-xl border border-indigo-400/30 bg-indigo-500/10 px-4 py-3 text-sm font-semibold text-indigo-300 disabled:opacity-50"
         >
           <Camera size={16} />
-          {model.isReviewing ? "Unavailable during review" : "Capture breakdown snapshot"}
+          {model.isReviewing ? "Unavailable during review" : "Capture this period"}
         </button>
       </div>
 

@@ -257,8 +257,52 @@ const legacyTaxProfiles = {
 export const taxYears = ["2026-27", "2025-26"];
 export const defaultTaxYear = taxYears[0];
 
+const currentTaxProfiles = {
+  ...legacyTaxProfiles,
+  "Standard - no tax-free threshold": [
+    { threshold: 0.0, rate: 0.15, base: 0.15 },
+    { threshold: 188.0, rate: 0.2084, base: 11.0185 },
+    { threshold: 371.0, rate: 0.179, base: 0.1066 },
+    { threshold: 515.0, rate: 0.3227, base: 74.1674 },
+    { threshold: 932.0, rate: 0.32, base: 71.6508 },
+    { threshold: 2246.0, rate: 0.39, base: 228.8816 },
+    { threshold: 3303.0, rate: 0.47, base: 493.1893 },
+  ],
+  "Standard - tax-free threshold": [
+    { threshold: 0.0, rate: 0.0, base: 0.0 },
+    { threshold: 362.0, rate: 0.15, base: 54.3462 },
+    { threshold: 538.0, rate: 0.25, base: 108.2135 },
+    { threshold: 673.0, rate: 0.17, base: 54.3473 },
+    { threshold: 721.0, rate: 0.179, base: 60.8377 },
+    { threshold: 865.0, rate: 0.3227, base: 185.1935 },
+    { threshold: 1282.0, rate: 0.32, base: 181.7319 },
+    { threshold: 2596.0, rate: 0.39, base: 363.4627 },
+    { threshold: 3653.0, rate: 0.47, base: 655.7704 },
+  ],
+  "Scale 5": [
+    { threshold: 0.0, rate: 0.0, base: 0.0 },
+    { threshold: 362.0, rate: 0.15, base: 54.3462 },
+    { threshold: 721.0, rate: 0.159, base: 60.8365 },
+    { threshold: 865.0, rate: 0.3027, base: 185.1923 },
+    { threshold: 1282.0, rate: 0.3, base: 181.7308 },
+    { threshold: 2596.0, rate: 0.37, base: 363.4615 },
+    { threshold: 3653.0, rate: 0.45, base: 655.7692 },
+  ],
+  "Scale 6": [
+    { threshold: 0.0, rate: 0.0, base: 0.0 },
+    { threshold: 362.0, rate: 0.15, base: 54.3462 },
+    { threshold: 721.0, rate: 0.159, base: 60.8365 },
+    { threshold: 865.0, rate: 0.3027, base: 185.1923 },
+    { threshold: 908.0, rate: 0.3527, base: 230.6135 },
+    { threshold: 1135.0, rate: 0.3127, base: 185.1923 },
+    { threshold: 1282.0, rate: 0.31, base: 181.7308 },
+    { threshold: 2596.0, rate: 0.38, base: 363.4615 },
+    { threshold: 3653.0, rate: 0.46, base: 655.7692 },
+  ],
+};
+
 export const taxTables = {
-  "2026-27": { ...legacyTaxProfiles },
+  "2026-27": currentTaxProfiles,
   "2025-26": { ...legacyTaxProfiles },
 };
 

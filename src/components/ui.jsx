@@ -237,7 +237,7 @@ export function AccountSummary({ accountTotals, leftoverDestination = "Investmen
       <div className="px-6 py-4 border-b border-white/5">
         <h3 className="text-base font-bold text-white/80">Account Totals</h3>
         <p className="text-xs text-white/40 mt-0.5 mono">
-          Where your money lands each week
+          Where your money lands each period
         </p>
       </div>
 
