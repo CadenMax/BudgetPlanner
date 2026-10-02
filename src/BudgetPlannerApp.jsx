@@ -14,6 +14,8 @@ import {
   History as HistoryIcon,
   ShieldCheck,
   UserRound,
+  MailWarning,
+  Send,
 } from "lucide-react";
 
 const tabs = [
@@ -41,6 +43,29 @@ export default function BudgetPlannerApp() {
       {/* Header */}
       <header style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
         <div className="mx-auto max-w-7xl px-4 md:px-8 pt-8 pb-0">
+
+          {!model.user.emailVerified && (
+            <div role="status" aria-live="polite" className="mb-6 flex flex-col gap-3 rounded-lg border border-amber-400/25 bg-amber-400/10 px-4 py-3 text-amber-100 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex min-w-0 items-start gap-3">
+                <MailWarning size={18} className="mt-0.5 shrink-0 text-amber-300" />
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold">Verify your email address</p>
+                  <p className="break-words text-xs text-amber-100/70">
+                    {model.verificationMessage || `A verification link was sent to ${model.user.email}.`}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={model.resendVerification}
+                disabled={model.verificationBusy}
+                className="inline-flex shrink-0 items-center justify-center gap-2 self-start rounded-lg border border-amber-300/30 px-3 py-2 text-xs font-semibold text-amber-200 hover:bg-amber-300/10 disabled:cursor-wait disabled:opacity-60 sm:self-center"
+              >
+                <Send size={14} />
+                {model.verificationBusy ? "Sending..." : "Resend email"}
+              </button>
+            </div>
+          )}
 
           {/* Top row */}
           <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-6 mb-8">

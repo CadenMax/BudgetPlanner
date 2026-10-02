@@ -47,6 +47,19 @@ Registration requires a unique username, email address, and password of at least
 
 Users can update their own username, email, and password from the **Account** tab. Signing out clears the in-memory budget state. Budget data is never stored in localStorage or sessionStorage.
 
+### Email verification
+New accounts receive a verification link by email and see a reminder at the top of the app until they verify. Users can request another link from that reminder. Verification links expire after 24 hours, and changing an account email requires verifying the new address. Existing accounts are treated as verified when the database is upgraded.
+
+Configure these variables on the API service to send mail through Resend:
+
+```text
+RESEND_API_KEY=re_...
+RESEND_FROM_EMAIL=Budget Elite <noreply@example.com>
+APP_URL=https://your-frontend-domain.example
+```
+
+Use a sender address on a domain verified in Resend. `APP_URL` must be the public frontend origin so verification links return through the frontend's `/api` proxy. If delivery is not configured or Resend rejects a message, the account remains usable and the banner offers a retry.
+
 ### Administrator access
 The default owner administrator is created when the API first initializes:
 
@@ -115,9 +128,10 @@ Railway should run this project as two services:
 2. Create a frontend service using `Dockerfile`. Keep both services in the same Railway project and environment so Railway private networking can resolve the API from the frontend.
 3. Add a Railway volume mounted at `/app/data` to the API service so the SQLite database survives deployments.
 4. In the frontend service variables, set `API_HOST` to a reference to the API service's `RAILWAY_PRIVATE_DOMAIN`, for example `${{api.RAILWAY_PRIVATE_DOMAIN}}` when the API service is named `api`. Use the exact Railway service name in the reference; do not guess or type a hostname from a different project or environment. Railway supplies the private domain, normally ending in `.railway.internal`.
-5. Set the frontend service's `API_PORT` to the port the API listens on. The API reads Railway's `PORT`; for example, if the API logs that it listens on `8080`, set frontend `API_PORT` to `8080` as well. The local Docker setup defaults to `3001`.
-6. Set the API service health check path to `/api/health`. Railway supplies `PORT` automatically; the API already reads that variable.
-7. Set `ADMIN_USERNAME`, `ADMIN_EMAIL`, and `ADMIN_PASSWORD` on the API service before the first deploy.
+5. In the frontend service's Public Networking settings, set the target port to match the frontend's `PORT` environment variable. Nginx listens on this port; a mismatch can make the Railway domain return a gateway error even when the container starts.
+6. Set the frontend service's `API_PORT` to the port the API listens on. The API reads Railway's `PORT`; for example, if the API logs that it listens on `8080`, set frontend `API_PORT` to `8080` as well. This is separate from the frontend's Public Networking target port. The local Docker setup defaults to `3001`.
+7. Set the API service health check path to `/api/health`. Railway supplies `PORT` automatically; the API already reads that variable.
+8. Set `ADMIN_USERNAME`, `ADMIN_EMAIL`, and `ADMIN_PASSWORD` on the API service before the first deploy.
 
 If the frontend logs `host not found in upstream`, verify `API_HOST` resolves to the API service's `RAILWAY_PRIVATE_DOMAIN` and that both services are deployed in the same Railway project environment. Nginx cannot start while its configured upstream hostname is unresolvable. If Nginx starts but API requests fail, verify `API_PORT` matches the API's listening `PORT`.
 

@@ -49,6 +49,8 @@ export function useBudgetModel() {
   const [user, setUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [authError, setAuthError] = useState("");
+  const [verificationMessage, setVerificationMessage] = useState("");
+  const [verificationBusy, setVerificationBusy] = useState(false);
   const [budgetReady, setBudgetReady] = useState(false);
   const [captures, setCaptures] = useState([]);
   const [isReviewing, setIsReviewing] = useState(false);
@@ -120,6 +122,9 @@ export function useBudgetModel() {
     resetBudget();
     setUser(response.user);
     setBudgetReady(true);
+    if (!response.verificationEmailSent) {
+      setVerificationMessage("Your account was created, but the verification email could not be sent. Try resending it.");
+    }
   };
 
   const login = async (email, password) => {
@@ -145,10 +150,38 @@ export function useBudgetModel() {
       body: JSON.stringify(details),
     });
     setUser(response.user);
+    if (response.verificationEmailSent === false) {
+      setVerificationMessage("Email updated, but the verification email could not be sent. Try resending it.");
+    } else if (response.verificationEmailSent) {
+      setVerificationMessage(`Verification email sent to ${response.user.email}.`);
+    }
+  };
+
+  const resendVerification = async () => {
+    setVerificationBusy(true);
+    setVerificationMessage("");
+    try {
+      await apiRequest("/api/auth/verification/resend", { method: "POST" });
+      setVerificationMessage(`Verification email sent to ${user.email}.`);
+    } catch (error) {
+      setVerificationMessage(error.message);
+    } finally {
+      setVerificationBusy(false);
+    }
   };
 
   useEffect(() => {
     let cancelled = false;
+    const params = new URLSearchParams(window.location.search);
+    const verificationResult = params.get("email_verification");
+    if (verificationResult) {
+      setVerificationMessage(verificationResult === "success"
+        ? "Email verified successfully."
+        : "That verification link is invalid or expired.");
+      params.delete("email_verification");
+      const query = params.toString();
+      window.history.replaceState({}, "", `${window.location.pathname}${query ? `?${query}` : ""}${window.location.hash}`);
+    }
     apiRequest("/api/auth/me")
       .then(async ({ user: currentUser }) => {
         if (cancelled) return;
@@ -446,6 +479,7 @@ export function useBudgetModel() {
 
   return {
     user, authLoading, authError, setAuthError, register, login, logout, updateAccount,
+    verificationMessage, verificationBusy, resendVerification,
     hoursWorked, setHoursWorked,
     hourlyRate, setHourlyRate,
     nonTaxableIncome, setNonTaxableIncome,

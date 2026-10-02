@@ -21,6 +21,7 @@ db.exec(`
     is_admin INTEGER NOT NULL DEFAULT 0,
     is_owner INTEGER NOT NULL DEFAULT 0,
     disabled INTEGER NOT NULL DEFAULT 0,
+    email_verified INTEGER NOT NULL DEFAULT 0,
     last_login TEXT,
     budget_json TEXT,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -29,6 +30,12 @@ db.exec(`
     token_hash TEXT PRIMARY KEY,
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     expires_at INTEGER NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS email_verification_tokens (
+    token_hash TEXT PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    expires_at INTEGER NOT NULL,
+    created_at INTEGER NOT NULL
   );
   CREATE TABLE IF NOT EXISTS audit_logs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -44,6 +51,7 @@ for (const statement of [
   "ALTER TABLE users ADD COLUMN is_admin INTEGER NOT NULL DEFAULT 0",
   "ALTER TABLE users ADD COLUMN is_owner INTEGER NOT NULL DEFAULT 0",
   "ALTER TABLE users ADD COLUMN disabled INTEGER NOT NULL DEFAULT 0",
+  "ALTER TABLE users ADD COLUMN email_verified INTEGER NOT NULL DEFAULT 1",
   "ALTER TABLE users ADD COLUMN last_login TEXT",
 ]) {
   try { db.exec(statement); } catch (error) {
@@ -57,11 +65,11 @@ const bootstrapPassword = String(process.env.ADMIN_PASSWORD || "ChangeMe123!");
 const bootstrapUsername = String(process.env.ADMIN_USERNAME || "admin").trim();
 const existingBootstrap = db.prepare("SELECT id FROM users WHERE email = ?").get(bootstrapEmail);
 if (!existingBootstrap) {
-  db.prepare("INSERT INTO users (username, email, password_hash, is_admin, is_owner) VALUES (?, ?, ?, 1, 1)")
+  db.prepare("INSERT INTO users (username, email, password_hash, is_admin, is_owner, email_verified) VALUES (?, ?, ?, 1, 1, 1)")
     .run(bootstrapUsername, bootstrapEmail, bcrypt.hashSync(bootstrapPassword, 12));
   console.warn(`Bootstrap admin created: ${bootstrapEmail} (change the default password immediately)`);
 } else {
-  db.prepare("UPDATE users SET is_admin = 1, is_owner = 1, username = COALESCE(username, ?) WHERE id = ?")
+  db.prepare("UPDATE users SET is_admin = 1, is_owner = 1, email_verified = 1, username = COALESCE(username, ?) WHERE id = ?")
     .run(bootstrapUsername, existingBootstrap.id);
 }
 
@@ -91,6 +99,7 @@ function sessionUser(req) {
   if (!token) return null;
   const row = db.prepare(`
     SELECT users.id, users.username, users.email, users.is_admin AS isAdmin, users.is_owner AS isOwner,
+      users.email_verified AS emailVerified,
       users.disabled, users.last_login AS lastLogin FROM sessions
     JOIN users ON users.id = sessions.user_id
     WHERE sessions.token_hash = ? AND sessions.expires_at > ? AND users.disabled = 0
@@ -134,14 +143,101 @@ function publicUser(user) {
     email: user.email,
     isAdmin: Boolean(user.isAdmin ?? user.is_admin),
     isOwner: Boolean(user.isOwner ?? user.is_owner),
+    emailVerified: Boolean(user.emailVerified ?? user.email_verified ?? true),
     disabled: Boolean(user.disabled),
     lastLogin: user.lastLogin ?? user.last_login ?? null,
   };
 }
 
+async function sendVerificationEmail(userId, email) {
+  const apiKey = process.env.RESEND_API_KEY;
+  const from = process.env.RESEND_FROM_EMAIL || process.env.EMAIL_FROM;
+  const appUrl = process.env.APP_URL;
+  if (!apiKey || !from || !appUrl) {
+    throw new Error("Set RESEND_API_KEY, RESEND_FROM_EMAIL, and APP_URL to enable email verification");
+  }
+
+  const token = newToken();
+  const tokenHash = hashToken(token);
+  const verificationUrl = new URL("/api/auth/verify-email", `${appUrl.replace(/\/+$/, "")}/`);
+  verificationUrl.searchParams.set("token", token);
+  db.prepare("DELETE FROM email_verification_tokens WHERE user_id = ?").run(userId);
+  db.prepare("INSERT INTO email_verification_tokens (token_hash, user_id, expires_at, created_at) VALUES (?, ?, ?, ?)")
+    .run(tokenHash, userId, Date.now() + 24 * 60 * 60 * 1000, Date.now());
+
+  try {
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        from,
+        to: [email],
+        subject: "Verify your Budget Elite email",
+        html: `<p>Verify your email address for Budget Elite:</p><p><a href="${verificationUrl.toString()}">Verify email address</a></p><p>This link expires in 24 hours. If you did not create this account, you can ignore this email.</p>`,
+        text: `Verify your Budget Elite email address: ${verificationUrl.toString()}\n\nThis link expires in 24 hours. If you did not create this account, you can ignore this email.`,
+      }),
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!response.ok) throw new Error(`Resend returned HTTP ${response.status}`);
+  } catch (error) {
+    db.prepare("DELETE FROM email_verification_tokens WHERE token_hash = ?").run(tokenHash);
+    throw error;
+  }
+}
+
+async function trySendVerificationEmail(userId, email) {
+  try {
+    await sendVerificationEmail(userId, email);
+    return true;
+  } catch (error) {
+    console.error(`Verification email delivery failed for user ${userId}: ${error.message}`);
+    return false;
+  }
+}
+
+function verificationResultUrl(result) {
+  const appUrl = process.env.APP_URL;
+  if (!appUrl) return null;
+  const url = new URL(appUrl);
+  url.searchParams.set("email_verification", result);
+  return url.toString();
+}
+
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
 
-app.post("/api/auth/register", (req, res) => {
+app.get("/api/auth/verify-email", (req, res) => {
+  const resultUrl = (result) => verificationResultUrl(result);
+  if (!resultUrl("invalid")) return res.status(503).send("Email verification is not configured.");
+
+  const token = String(req.query?.token || "");
+  if (token.length < 32 || token.length > 128) return res.redirect(303, resultUrl("invalid"));
+  const row = db.prepare("SELECT user_id AS userId FROM email_verification_tokens WHERE token_hash = ? AND expires_at > ?")
+    .get(hashToken(token), Date.now());
+  if (!row) return res.redirect(303, resultUrl("invalid"));
+
+  db.transaction(() => {
+    db.prepare("UPDATE users SET email_verified = 1 WHERE id = ?").run(row.userId);
+    db.prepare("DELETE FROM email_verification_tokens WHERE user_id = ?").run(row.userId);
+    audit(null, row.userId, "email.verified");
+  })();
+  res.redirect(303, resultUrl("success"));
+});
+
+app.post("/api/auth/verification/resend", requireUser, async (req, res) => {
+  if (req.user.emailVerified) return res.json({ sent: false, verified: true });
+  const lastToken = db.prepare("SELECT created_at AS createdAt FROM email_verification_tokens WHERE user_id = ? ORDER BY created_at DESC LIMIT 1")
+    .get(req.user.id);
+  if (lastToken && Date.now() - lastToken.createdAt < 60000) {
+    return res.status(429).json({ error: "Please wait a minute before requesting another verification email" });
+  }
+
+  if (!(await trySendVerificationEmail(req.user.id, req.user.email))) {
+    return res.status(503).json({ error: "Could not send the verification email. Check the email service configuration and try again." });
+  }
+  res.json({ sent: true });
+});
+
+app.post("/api/auth/register", async (req, res) => {
   const username = String(req.body?.username || "").trim();
   const email = String(req.body?.email || "").trim().toLowerCase();
   const password = String(req.body?.password || "");
@@ -149,10 +245,14 @@ app.post("/api/auth/register", (req, res) => {
   if (!/^\S+@\S+\.\S+$/.test(email)) return res.status(400).json({ error: "Enter a valid email address" });
   if (password.length < 8) return res.status(400).json({ error: "Password must be at least 8 characters" });
   try {
-    const result = db.prepare("INSERT INTO users (username, email, password_hash, budget_json) VALUES (?, ?, ?, ?)")
+    const result = db.prepare("INSERT INTO users (username, email, password_hash, budget_json, email_verified) VALUES (?, ?, ?, ?, 0)")
       .run(username, email, bcrypt.hashSync(password, 12), validBudget(req.body?.budget) ? JSON.stringify(req.body.budget) : null);
     setSession(res, result.lastInsertRowid);
-    res.status(201).json({ user: publicUser({ id: result.lastInsertRowid, username, email, isAdmin: 0, isOwner: 0 }) });
+    const verificationEmailSent = await trySendVerificationEmail(result.lastInsertRowid, email);
+    res.status(201).json({
+      user: publicUser({ id: result.lastInsertRowid, username, email, isAdmin: 0, isOwner: 0, emailVerified: 0 }),
+      verificationEmailSent,
+    });
   } catch (error) {
     if (String(error.message).includes("UNIQUE")) return res.status(409).json({ error: "That username or email is already in use" });
     throw error;
@@ -162,7 +262,7 @@ app.post("/api/auth/register", (req, res) => {
 app.post("/api/auth/login", (req, res) => {
   const email = String(req.body?.email || "").trim().toLowerCase();
   const password = String(req.body?.password || "");
-  const user = db.prepare("SELECT id, username, email, password_hash, is_admin AS isAdmin, is_owner AS isOwner, disabled FROM users WHERE email = ? OR username = ?").get(email, email);
+  const user = db.prepare("SELECT id, username, email, password_hash, is_admin AS isAdmin, is_owner AS isOwner, email_verified AS emailVerified, disabled FROM users WHERE email = ? OR username = ?").get(email, email);
   if (!user || !bcrypt.compareSync(password, user.password_hash)) {
     return res.status(401).json({ error: "Email or password is incorrect" });
   }
@@ -185,26 +285,34 @@ app.get("/api/auth/me", (req, res) => {
   res.json({ user });
 });
 
-app.patch("/api/auth/account", requireUser, (req, res) => {
+app.patch("/api/auth/account", requireUser, async (req, res) => {
   const username = String(req.body?.username || "").trim();
   const email = String(req.body?.email || "").trim().toLowerCase();
   const password = req.body?.password === undefined ? null : String(req.body.password);
   if (!validUsername(username)) return res.status(400).json({ error: "Username must be 3-30 letters, numbers, or underscores" });
   if (!/^\S+@\S+\.\S+$/.test(email)) return res.status(400).json({ error: "Enter a valid email address" });
   if (password !== null && password.length < 8) return res.status(400).json({ error: "Password must be at least 8 characters" });
+  const emailChanged = email !== req.user.email;
+  const emailVerified = emailChanged ? 0 : Number(req.user.emailVerified);
   try {
     if (password === null) {
-      db.prepare("UPDATE users SET username = ?, email = ? WHERE id = ?").run(username, email, req.user.id);
+      db.prepare("UPDATE users SET username = ?, email = ?, email_verified = ? WHERE id = ?")
+        .run(username, email, emailVerified, req.user.id);
     } else {
-      db.prepare("UPDATE users SET username = ?, email = ?, password_hash = ? WHERE id = ?")
-        .run(username, email, bcrypt.hashSync(password, 12), req.user.id);
+      db.prepare("UPDATE users SET username = ?, email = ?, email_verified = ?, password_hash = ? WHERE id = ?")
+        .run(username, email, emailVerified, bcrypt.hashSync(password, 12), req.user.id);
     }
-    audit(req.user.id, req.user.id, "account.updated", "username/email/password");
-    res.json({ user: publicUser({ ...req.user, username, email }) });
   } catch (error) {
     if (String(error.message).includes("UNIQUE")) return res.status(409).json({ error: "That username or email is already in use" });
     throw error;
   }
+  if (emailChanged) db.prepare("DELETE FROM email_verification_tokens WHERE user_id = ?").run(req.user.id);
+  audit(req.user.id, req.user.id, "account.updated", "username/email/password");
+  const verificationEmailSent = emailChanged ? await trySendVerificationEmail(req.user.id, email) : undefined;
+  res.json({
+    user: publicUser({ ...req.user, username, email, emailVerified }),
+    ...(emailChanged ? { verificationEmailSent } : {}),
+  });
 });
 
 app.get("/api/budget", requireUser, (req, res) => {
@@ -213,7 +321,7 @@ app.get("/api/budget", requireUser, (req, res) => {
 });
 
 app.get("/api/admin/users", requireAdmin, (_req, res) => {
-  const users = db.prepare("SELECT id, username, email, is_admin AS isAdmin, is_owner AS isOwner, disabled, last_login AS lastLogin, created_at FROM users ORDER BY id").all()
+  const users = db.prepare("SELECT id, username, email, email_verified AS emailVerified, is_admin AS isAdmin, is_owner AS isOwner, disabled, last_login AS lastLogin, created_at FROM users ORDER BY id").all()
     .map(publicUser);
   res.json({ users });
 });
@@ -231,7 +339,7 @@ app.get("/api/admin/audit", requireAdmin, (_req, res) => {
   res.json({ logs });
 });
 
-app.post("/api/admin/users", requireAdmin, (req, res) => {
+app.post("/api/admin/users", requireAdmin, async (req, res) => {
   const username = String(req.body?.username || "").trim().toLowerCase();
   const email = String(req.body?.email || "").trim().toLowerCase();
   const password = String(req.body?.password || "");
@@ -242,16 +350,20 @@ app.post("/api/admin/users", requireAdmin, (req, res) => {
     const result = db.prepare("INSERT INTO users (username, email, password_hash, is_admin) VALUES (?, ?, ?, 1)")
       .run(username, email, bcrypt.hashSync(password, 12));
     audit(req.user.id, result.lastInsertRowid, "admin.created", username);
-    res.status(201).json({ user: publicUser({ id: result.lastInsertRowid, username, email, isAdmin: 1, isOwner: 0 }) });
+    const verificationEmailSent = await trySendVerificationEmail(result.lastInsertRowid, email);
+    res.status(201).json({
+      user: publicUser({ id: result.lastInsertRowid, username, email, isAdmin: 1, isOwner: 0, emailVerified: 0 }),
+      verificationEmailSent,
+    });
   } catch (error) {
     if (String(error.message).includes("UNIQUE")) return res.status(409).json({ error: "That username or email is already in use" });
     throw error;
   }
 });
 
-app.patch("/api/admin/users/:id", requireAdmin, (req, res) => {
+app.patch("/api/admin/users/:id", requireAdmin, async (req, res) => {
   const id = Number(req.params.id);
-  const target = db.prepare("SELECT id, is_admin AS isAdmin, is_owner AS isOwner, disabled FROM users WHERE id = ?").get(id);
+  const target = db.prepare("SELECT id, username, email, email_verified AS emailVerified, is_admin AS isAdmin, is_owner AS isOwner, disabled FROM users WHERE id = ?").get(id);
   const isAdmin = req.body?.isAdmin === undefined ? Boolean(target?.isAdmin) : Boolean(req.body.isAdmin);
   const isOwner = req.body?.isOwner === undefined ? Boolean(target?.isOwner) : Boolean(req.body.isOwner);
   const disabled = req.body?.disabled === undefined ? Boolean(target?.disabled) : Boolean(req.body.disabled);
@@ -272,14 +384,20 @@ app.patch("/api/admin/users/:id", requireAdmin, (req, res) => {
   }
   if (username !== null && !validUsername(username)) return res.status(400).json({ error: "Username must be 3-30 letters, numbers, or underscores" });
   if (email !== null && !/^\S+@\S+\.\S+$/.test(email)) return res.status(400).json({ error: "Enter a valid email address" });
+  const nextUsername = username ?? target.username;
+  const nextEmail = email ?? target.email;
+  const emailChanged = nextEmail !== target.email;
   try {
-    const result = username !== null && email !== null
-      ? db.prepare("UPDATE users SET is_admin = ?, is_owner = ?, disabled = ?, username = ?, email = ? WHERE id = ?").run(isAdmin ? 1 : 0, isOwner ? 1 : 0, disabled ? 1 : 0, username, email, id)
-      : db.prepare("UPDATE users SET is_admin = ?, is_owner = ?, disabled = ? WHERE id = ?").run(isAdmin ? 1 : 0, isOwner ? 1 : 0, disabled ? 1 : 0, id);
+    const result = db.prepare("UPDATE users SET is_admin = ?, is_owner = ?, disabled = ?, username = ?, email = ?, email_verified = ? WHERE id = ?")
+      .run(isAdmin ? 1 : 0, isOwner ? 1 : 0, disabled ? 1 : 0, nextUsername, nextEmail, emailChanged ? 0 : Number(target.emailVerified), id);
     if (!result.changes) return res.status(404).json({ error: "User not found" });
   } catch (error) {
     if (String(error.message).includes("UNIQUE")) return res.status(409).json({ error: "That username or email is already in use" });
     throw error;
+  }
+  if (emailChanged) {
+    db.prepare("DELETE FROM email_verification_tokens WHERE user_id = ?").run(id);
+    await trySendVerificationEmail(id, nextEmail);
   }
   audit(req.user.id, id, "admin.user.updated", JSON.stringify({ isAdmin, isOwner, disabled, username, email }));
   res.status(204).end();
