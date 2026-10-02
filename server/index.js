@@ -178,7 +178,12 @@ async function sendVerificationEmail(userId, email) {
       }),
       signal: AbortSignal.timeout(10000),
     });
-    if (!response.ok) throw new Error(`Resend returned HTTP ${response.status}`);
+    if (!response.ok) {
+      const responseBody = await response.json().catch(() => ({}));
+      const errorName = responseBody.name || responseBody.statusCode || "Resend error";
+      const errorMessage = responseBody.message || "No error details returned";
+      throw new Error(`${errorName} (HTTP ${response.status}): ${errorMessage}`);
+    }
   } catch (error) {
     db.prepare("DELETE FROM email_verification_tokens WHERE token_hash = ?").run(tokenHash);
     throw error;
